@@ -23,7 +23,7 @@ RGB = 0
 #Depth = 1 # Not Trained
 #Flow = 2  # Not Trained
 
-cfg_type = ATTENTIONX
+cfg_type = ATTENTIONO
 cfg_modality = RGB
 
 seq_len = 32
@@ -31,8 +31,8 @@ batch_size = 8
 num_classes = 249
 testing_datalist = './dataset_splits/IsoGD/valid_rgb_list.txt'
 weight_decay = 0.00005
-model_prefix = './models/'
-model_prefix = '/raid/gmzhu/tensorflow/ConvLSTMForGR/models/'
+model_prefix = './models'
+# model_prefix = '/raid/gmzhu/tensorflow/ConvLSTMForGR/models/'
   
 inputs = keras.layers.Input(shape=(seq_len, 112, 112, 3),
                             batch_shape=(batch_size, seq_len, 112, 112, 3))
@@ -46,6 +46,7 @@ optimizer = keras.optimizers.SGD(lr=0.001, decay=0, momentum=0.9, nesterov=False
 model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
 if cfg_type==ATTENTIONX:
+  # pretrained_model = '%s/isogr_rgb_weights.16-6.00.h5'%model_prefix
   pretrained_model = '%s/isogr_rgb_attenxclstm_weights.h5'%model_prefix
 elif cfg_type==ATTENTIONI:
   pretrained_model = '%s/isogr_rgb_atteniclstm_weights.h5'%model_prefix
