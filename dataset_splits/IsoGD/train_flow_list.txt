@@ -14213,7 +14213,7 @@
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14213/ 37 35
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14214/ 32 239
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14215/ 45 243
-/disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14216/ 1 186
+/disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14216/ 64 161
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14217/ 47 50
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14218/ 36 58
 /disk1/shchen/dataset/IsoGD_Image/train_image/Flow/F_14219/ 66 53

@@ -14213,7 +14213,7 @@
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14213/ 38 35
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14214/ 33 239
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14215/ 46 243
-/disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14216/ 26 186
+/disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14216/ 37 13
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14217/ 48 50
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14218/ 37 58
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_14219/ 67 53
@@ -35874,4 +35874,4 @@
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_35875/ 35 32
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_35876/ 42 0
 /disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_35877/ 37 13
-/disk1/shchen/dataset/IsoGD_Image/train_image/Depth/K_35878/ 65 161
+

@@ -14213,7 +14213,7 @@
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14213/ 38 35
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14214/ 33 239
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14215/ 46 243
-/disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14216/ 26 186
+/disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14216/ 65 161
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14217/ 48 50
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14218/ 37 58
 /disk1/shchen/dataset/IsoGD_Image/train_image/RGB/M_14219/ 67 53
