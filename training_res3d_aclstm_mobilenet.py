@@ -11,12 +11,6 @@ K=tf.contrib.keras.backend
 import inputs as data
 from callbacks import LearningRateScheduler 
 
-from datetime import datetime
-from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from datagen import isoTrainImageGenerator, isoTestImageGenerator
-from res3d_aclstm_mobilenet import res3d_aclstm_mobilenet
-import inputs as data
-import tensorflow as tf
 sys.path.append("./networks")
 keras = tf.contrib.keras
 l2 = keras.regularizers.l2

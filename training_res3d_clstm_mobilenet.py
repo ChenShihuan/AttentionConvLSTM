@@ -87,9 +87,11 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
 
+# load pretrained model
 pretrained_model = '%s/jester_%s_gatedclstm_weights.h5'%(model_prefix,str_modality)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=False)
+
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
 
