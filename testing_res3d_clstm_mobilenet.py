@@ -8,7 +8,7 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
-import inputs as data
+import networks.inputs_jester as data
 from res3d_clstm_mobilenet import res3d_clstm_mobilenet
 from datagen import jesterTestImageGenerator
 from datagen import isoTestImageGenerator
@@ -24,7 +24,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = ISOGD
+cfg_dataset = JESTER
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -42,7 +42,7 @@ elif cfg_dataset == ISOGD:
     seq_len = 32
     batch_size = 8
     num_classes = 249
-    testing_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
+    testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
 # model_prefix = '/raid/gmzhu/tensorflow/ConvLSTMForGR/models/'
@@ -60,14 +60,15 @@ optimizer = keras.optimizers.SGD(
     lr=0.001, decay=0, momentum=0.9, nesterov=False)
 model.compile(optimizer=optimizer,
               loss='categorical_crossentropy', metrics=['accuracy'])
+print(model.summary())
 
 if cfg_dataset == JESTER:
     pretrained_model = '%s/jester_%s_gatedclstm_weights.h5' % (
         model_prefix, str_modality)
 elif cfg_dataset == ISOGD:
-    pretrained_model = '%s/isogr_%s_gatedclstm_weights.h5' % (
-        model_prefix, str_modality)
-    # pretrained_model = '%s/isogr_rgb_weights.09-7.25.h5'%(model_prefix)
+    # pretrained_model = '%s/isogr_%s_gatedclstm_weights.h5' % (
+    #     model_prefix, str_modality)
+    pretrained_model = '%s/isogr_rgb_weights.08-2.75.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=False)
 for i in range(len(model.trainable_weights)):

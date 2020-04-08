@@ -8,7 +8,7 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
-import inputs as data
+import inputs_jester as data
 from res3d_clstm_mobilenet import res3d_clstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
@@ -26,7 +26,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = ISOGD
+cfg_dataset = JESTER
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -88,9 +88,9 @@ outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
 
 # load pretrained model
-pretrained_model = '%s/jester_%s_gatedclstm_weights.h5'%(model_prefix,str_modality)
-print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=False)
+# pretrained_model = '%sjester_rgb_gatedclstm_weights_pretrained.h5'%(model_prefix)
+# print 'Loading pretrained model from %s' % pretrained_model
+# model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
