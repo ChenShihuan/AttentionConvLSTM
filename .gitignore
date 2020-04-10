@@ -148,3 +148,7 @@ static
 
 # model
 models/
+
+# output
+nohup.out
+.out
