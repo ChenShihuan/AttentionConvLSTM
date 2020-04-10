@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import io
 import sys
 sys.path.append("./networks")
@@ -8,7 +8,7 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
-import inputs_jester as data
+import inputs_IsoGD as data
 from res3d_aclstm_mobilenet import res3d_aclstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
@@ -25,13 +25,6 @@ RGB = 0
 Depth = 1
 Flow = 2
 
-# Dataset
-JESTER = 0
-ISOGD = 1
-
-cfg_modality = RGB
-cfg_dataset = JESTER
-
 cfg_type = ATTENTIONX
 cfg_modality = RGB
 if cfg_modality == RGB:
@@ -41,28 +34,18 @@ elif cfg_modality == Depth:
 elif cfg_modality == Flow:
     str_modality = 'flow'
 
-if cfg_dataset == JESTER:
-    nb_epoch = 30
-    init_epoch = 0
-    seq_len = 16
-    batch_size = 16
-    num_classes = 27
-    dataset_name = 'jester_%s' % str_modality
-    training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
-    testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
-elif cfg_dataset == ISOGD:
-    nb_epoch = 20
-    init_epoch = 0
-    seq_len = 32
-    batch_size = 8
-    num_classes = 249
-    dataset_name = 'isogr_%s' % str_modality
-    training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
-    testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
-
+nb_epoch = 20
+init_epoch = 0
+seq_len = 32
+batch_size = 8
+num_classes = 249
+training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
+testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 weight_decay = 0.00005
-model_prefix = './models/AttenX'
+model_prefix = './models/'
+
+dataset_name = 'isogr_%s' % str_modality
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 

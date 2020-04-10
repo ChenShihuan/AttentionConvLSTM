@@ -36,7 +36,7 @@ elif cfg_modality == Flow:
     str_modality = 'flow'
 
 if cfg_dataset == JESTER:
-    nb_epoch = 30
+    nb_epoch = 10
     init_epoch = 0
     seq_len = 16
     batch_size = 16
@@ -88,9 +88,9 @@ outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
 
 # load pretrained model
-# pretrained_model = '%sjester_rgb_gatedclstm_weights_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % pretrained_model
-# model.load_weights(pretrained_model, by_name=True)
+pretrained_model = '%sjester_rgb_weights.09-0.82.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % pretrained_model
+model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
