@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import io
 import sys
 sys.path.append("./networks")
@@ -8,7 +8,7 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
-import inputs_IsoGD as data
+import inputs as data
 from res3d_aclstm_mobilenet import res3d_aclstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
@@ -25,7 +25,7 @@ RGB = 0
 Depth = 1
 Flow = 2
 
-cfg_type = ATTENTIONX
+cfg_type = ATTENTIONI
 cfg_modality = RGB
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -77,6 +77,10 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 
 model = keras.models.Model(inputs=inputs, outputs=outputs)
+
+pretrained_model = '%sjester_rgb_weights.04-0.71_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % pretrained_model
+model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]

@@ -1,5 +1,5 @@
 import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import io
 import sys
 sys.path.append("./networks")
@@ -83,7 +83,7 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 jester_pertrained_model = keras.models.Model(inputs=inputs, outputs=outputs)
 
-pretrained_model = '%sjester_rgb_gatedclstm_weights_pretrained.h5'%(model_prefix)
+pretrained_model = '%sjester_rgb_weights.04-0.71.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 jester_pertrained_model.load_weights(pretrained_model, by_name=True)
 
@@ -92,7 +92,7 @@ print(jester_pertrained_model.summary())
 model = keras.models.Model(inputs=jester_pertrained_model.input, outputs=jester_pertrained_model.get_layer('Flatten').output)
 print(model.summary())
 
-pretrained_model_without_full_connet = '%sjester_rgb_gatedclstm_weights_pretrained.h5'%(model_prefix)
+pretrained_model_without_full_connet = '%sjester_rgb_weights.04-0.71_pretrained.h5'%(model_prefix)
 model.save_weights(pretrained_model_without_full_connet)
 print 'Svave pretrained model without full connet layer'
 

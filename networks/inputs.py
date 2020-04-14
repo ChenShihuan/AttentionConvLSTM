@@ -201,7 +201,7 @@ def prepare_jester_rgb_data(image_info):
   processed_images = np.empty((output_frame_cnt, 112, 112, 3), dtype=np.float32)
   crop_random = random.random()
   for idx in xrange(0, output_frame_cnt):
-    image_file = '%s%05d.jpg' %(video_path, (rand_frames[idx]-1))
+    image_file = '%s/%05d.jpg' %(video_path, rand_frames[idx])
     # assert os.path.exists(image_file)
     image = imread(image_file)
     image_h, image_w, image_c = np.shape(image)
@@ -248,7 +248,7 @@ def prepare_jester_flow_data(image_info):
   processed_images = np.empty((output_frame_cnt, 112, 112, 3), dtype=np.float32)
   crop_random = random.random()
   for idx in xrange(0, output_frame_cnt):
-    image_file = '%s%06d.jpg' %(video_path, (rand_frames[idx]-1))
+    image_file = '%s/%06d.jpg' %(video_path, rand_frames[idx])
     # assert os.path.exists(image_file)
     image = imread(image_file)
     image_h, image_w, image_c = np.shape(image)

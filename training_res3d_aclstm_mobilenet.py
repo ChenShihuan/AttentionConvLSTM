@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import io
 import sys
 sys.path.append("./networks")
@@ -8,10 +8,11 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
-import inputs_jester as data
+import inputs as data
 from res3d_aclstm_mobilenet import res3d_aclstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
+from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
 
@@ -108,13 +109,25 @@ model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
                                    save_best_only=False, save_weights_only=True, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
-model.fit_generator(isoTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-                    steps_per_epoch=train_steps,
-                    epochs=nb_epoch,
-                    verbose=1,
-                    callbacks=callbacks,
-                    validation_data=isoTestImageGenerator(
-                        testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-                    validation_steps=test_steps,
-                    initial_epoch=init_epoch,
-                    )
+if cfg_dataset == JESTER:
+    model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        steps_per_epoch=train_steps,
+                        epochs=nb_epoch,
+                        verbose=1,
+                        callbacks=callbacks,
+                        validation_data=jesterTestImageGenerator(
+                            testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        validation_steps=test_steps,
+                        initial_epoch=init_epoch,
+                        )
+elif cfg_dataset == ISOGD:
+    model.fit_generator(isoTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        steps_per_epoch=train_steps,
+                        epochs=nb_epoch,
+                        verbose=1,
+                        callbacks=callbacks,
+                        validation_data=isoTestImageGenerator(
+                            testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        validation_steps=test_steps,
+                        initial_epoch=init_epoch,
+                        )
