@@ -76,11 +76,35 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
                              kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 
-model = keras.models.Model(inputs=inputs, outputs=outputs)
+model_IsoGD_RGB  = keras.models.Model(inputs=inputs, outputs=feature)
+# print(model_IsoGD_RGB.summary())
+model_IsoGD_FLow = keras.models.Model(inputs=inputs, outputs=feature)
 
-pretrained_model = '%sjester_rgb_weights.04-0.71_pretrained.h5'%(model_prefix)
-print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=True)
+IsoGD_RGB_pretrained_model  = '%sisogr_rgb_gatedclstm_weights.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % model_IsoGD_RGB
+IsoGD_FLow_pretrained_model = '%sisogr_flow_gatedclstm_weights.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % model_IsoGD_FLow
+
+model_IsoGD_RGB.load_weights(IsoGD_RGB_pretrained_model, by_name=True)
+print(model_IsoGD_RGB.summary())
+# model_IsoGD_RGB = keras.models.Model(inputs=model_IsoGD_RGB.input, outputs=model_IsoGD_RGB.get_layer('Average_Pooling').output)
+# print(model_IsoGD_RGB.summary())
+
+model_IsoGD_FLow.load_weights(IsoGD_FLow_pretrained_model, by_name=True)
+# model_IsoGD_FLow = keras.models.Model(inputs=model_IsoGD_FLow.input, outputs=model_IsoGD_FLow.get_layer('Average_Pooling').output)
+print(model_IsoGD_FLow.summary())
+
+r1 = model_IsoGD_RGB.output
+r2 = model_IsoGD_FLow.output
+
+x = keras.layers.Concatenate(axis=-1)([r1, r2])
+
+flatten = keras.layers.Flatten(name='Flatten')(x)
+classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
+outputs = keras.layers.Activation('softmax', name='Output')(classes)
+model = keras.models.Model(inputs=inputs, outputs=outputs)
+print(model.summary())
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
