@@ -5,7 +5,12 @@ import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
 
-def res3d(inputs, weight_decay):
+def multiply(a):
+    x = np.multiply(a[0], a[1])
+    print('x:',x)
+    return x
+
+def Res3D_Block1(inputs, weight_decay):
   # Res3D Block 1
   conv3d_1 = keras.layers.Conv3D(64, (3,7,7), strides=(1,2,2), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
@@ -13,17 +18,51 @@ def res3d(inputs, weight_decay):
                     name='Conv3D_1')(inputs)
   conv3d_1 = keras.layers.BatchNormalization(name='BatchNorm_1_0')(conv3d_1)
   conv3d_1 = keras.layers.Activation('relu', name='ReLU_1')(conv3d_1)
- 
+  return conv3d_1
+
+  # Global_Average_Pooling
+  Global_Average_Pooling = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling')(conv3d_1)
+  print('c2',Global_Average_Pooling.shape)
+
+  # FC
+  # units=class_num, units=out_dim / ratio
+  Fully_connected_1a = keras.layers.Dense(64 / weight_decay, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(weight_decay), name='Fully_connected_1a')(Global_Average_Pooling)
+  print('c3',Fully_connected_1a.shape)
+  # ReLU
+  ReLU_1 = keras.layers.Activation('relu', name='SE_ReLU_1')(Fully_connected_1a)
+  print('c4',ReLU_1.shape)
+  # FC
+  # units=class_num, units=out_dim
+  Fully_connected_1b = keras.layers.Dense(64, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(weight_decay), name='Fully_connected_1b')(ReLU_1)
+  print('c5',Fully_connected_1b.shape)
+  # Sigmoid
+  Sigmoid = keras.backend.sigmoid(Fully_connected_1b)
+  print('c6',Sigmoid.shape)
+  # Scale
+  excitation = keras.layers.Reshape([1,1,1,64], name='SE_Reshape')(Sigmoid)
+  print('c7_0',excitation.shape)
+
+  scale = keras.layers.Lambda(multiply, name='SE_scale')([conv3d_1, excitation])
+  print('c7_1',scale.shape)
+  outputs = keras.layers.Concatenate(axis=1)([conv3d_1, scale])
+  print('c7_2',outputs.shape)
+  return outputs
+  
+
+
+def Res3D_Block2(inputs, weight_decay): 
   # Res3D Block 2
   conv3d_2a_1 = keras.layers.Conv3D(64, (1,1,1), strides=(1,1,1), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_2a_1')(conv3d_1)
+                    name='Conv3D_2a_1')(inputs)
   conv3d_2a_1 = keras.layers.BatchNormalization(name='BatchNorm_2a_1')(conv3d_2a_1)
   conv3d_2a_a = keras.layers.Conv3D(64, (3,3,3), strides=(1,1,1), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_2a_a')(conv3d_1)
+                    name='Conv3D_2a_a')(inputs)
   conv3d_2a_a = keras.layers.BatchNormalization(name='BatchNorm_2a_a')(conv3d_2a_a)
   conv3d_2a_a = keras.layers.Activation('relu', name='ReLU_2a_a')(conv3d_2a_a)
   conv3d_2a_b = keras.layers.Conv3D(64, (3,3,3), strides=(1,1,1), padding='same', 
@@ -48,16 +87,19 @@ def res3d(inputs, weight_decay):
   conv3d_2b = keras.layers.Add(name='Add_2b')([conv3d_2a, conv3d_2b_b])
   conv3d_2b = keras.layers.Activation('relu', name='ReLU_2b')(conv3d_2b)
 
+  return conv3d_2b
+
+def Res3D_Block3(inputs, weight_decay):
   # Res3D Block 3
   conv3d_3a_1 = keras.layers.Conv3D(128, (1,1,1), strides=(2,2,2), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_3a_1')(conv3d_2b)
+                    name='Conv3D_3a_1')(inputs)
   conv3d_3a_1 = keras.layers.BatchNormalization(name='BatchNorm_3a_1')(conv3d_3a_1)
   conv3d_3a_a = keras.layers.Conv3D(128, (3,3,3), strides=(2,2,2), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_3a_a')(conv3d_2b)
+                    name='Conv3D_3a_a')(inputs)
   conv3d_3a_a = keras.layers.BatchNormalization(name='BatchNorm_3a_a')(conv3d_3a_a)
   conv3d_3a_a = keras.layers.Activation('relu', name='ReLU_3a_a')(conv3d_3a_a)
   conv3d_3a_b = keras.layers.Conv3D(128, (3,3,3), strides=(1,1,1), padding='same', 
@@ -82,16 +124,19 @@ def res3d(inputs, weight_decay):
   conv3d_3b = keras.layers.Add(name='Add_3b')([conv3d_3a, conv3d_3b_b])
   conv3d_3b = keras.layers.Activation('relu', name='ReLU_3b')(conv3d_3b)
 
+  return conv3d_3b
+
+def Res3D_Block4(inputs, weight_decay):
   # Res3D Block 4
   conv3d_4a_1 = keras.layers.Conv3D(256, (1,1,1), strides=(1,1,1), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_4a_1')(conv3d_3b)
+                    name='Conv3D_4a_1')(inputs)
   conv3d_4a_1 = keras.layers.BatchNormalization(name='BatchNorm_4a_1')(conv3d_4a_1)
   conv3d_4a_a = keras.layers.Conv3D(256, (3,3,3), strides=(1,1,1), padding='same', 
                     dilation_rate=(1,1,1), kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), use_bias=False, 
-                    name='Conv3D_4a_a')(conv3d_3b)
+                    name='Conv3D_4a_a')(inputs)
   conv3d_4a_a = keras.layers.BatchNormalization(name='BatchNorm_4a_a')(conv3d_4a_a)
   conv3d_4a_a = keras.layers.Activation('relu', name='ReLU_4a_a')(conv3d_4a_a)
   conv3d_4a_b = keras.layers.Conv3D(256, (3,3,3), strides=(1,1,1), padding='same', 
@@ -117,6 +162,19 @@ def res3d(inputs, weight_decay):
   conv3d_4b = keras.layers.Activation('relu', name='ReLU_4b')(conv3d_4b)
 
   return conv3d_4b
+
+def res3d(inputs, weight_decay):
+  res3d_1 = Res3D_Block1(inputs, weight_decay)  ### (2, 32, 56, 56, 64)
+
+  res3d_2 = Res3D_Block2(res3d_1, weight_decay) 
+
+  print(res3d_2.shape, type(res3d_2))
+  
+  res3d_3 = Res3D_Block3(res3d_2, weight_decay) 
+  res3d_4 = Res3D_Block4(res3d_3, weight_decay) 
+
+  return res3d_4
+
 
 def relu6(x):
   return keras.activations.relu(x,max_value=6)
@@ -187,6 +245,7 @@ def res3d_clstm_mobilenet(inputs, seq_len, weight_decay):
                       kernel_initializer='he_normal', recurrent_initializer='he_normal',
                       kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
                       return_sequences=True, name='gatedclstm2d_1')(res3d_featmap)
+  
   clstm2d_2 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
                       kernel_initializer='he_normal', recurrent_initializer='he_normal',
                       kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
