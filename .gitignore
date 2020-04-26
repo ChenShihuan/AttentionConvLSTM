@@ -149,6 +149,7 @@ static
 
 # model
 models/
+models_old/
 .h5
 
 # output
