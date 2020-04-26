@@ -69,7 +69,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.00001
+    learning_rate = 0.001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
