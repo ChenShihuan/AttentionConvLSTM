@@ -37,7 +37,7 @@ elif cfg_modality == Flow:
     str_modality = 'flow'
 
 if cfg_dataset == JESTER:
-    nb_epoch = 10
+    nb_epoch = 30
     init_epoch = 0
     seq_len = 16
     batch_size = 16
@@ -69,7 +69,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
+    learning_rate = 0.00001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -92,9 +92,9 @@ model = keras.models.Model(inputs=inputs, outputs=outputs)
 # model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-pretrained_model = '%sjester_rgb_weights.01-1.31.h5'%(model_prefix)
-print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=True)
+# pretrained_model = '%sjester_rgb_weights.02-0.71.h5'%(model_prefix)
+# print 'Loading pretrained model from %s' % pretrained_model
+# model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
