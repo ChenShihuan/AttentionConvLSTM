@@ -69,7 +69,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
+    learning_rate = 0.0005
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -88,13 +88,13 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
 
-# muli GPU
+# multi GPU
 # model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-# pretrained_model = '%sjester_rgb_weights.02-0.71.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % pretrained_model
-# model.load_weights(pretrained_model, by_name=True)
+pretrained_model = '%sjester_rgb_weights.13-0.86.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % pretrained_model
+model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
@@ -108,7 +108,7 @@ lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-                                   save_best_only=False, save_weights_only=True, mode='auto')
+                                   save_best_only=False, save_weights_only=False, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
 if cfg_dataset == JESTER:

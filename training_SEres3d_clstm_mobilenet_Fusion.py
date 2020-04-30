@@ -9,7 +9,7 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet import res3d_clstm_mobilenet
+from SEres3d_clstm_mobilenet_Fusion import res3d_clstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
@@ -27,7 +27,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = ISOGD
+cfg_dataset = JESTER
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -56,7 +56,7 @@ elif cfg_dataset == ISOGD:
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-model_prefix = './models/'
+model_prefix = './models/SpeedUp/'
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
@@ -79,20 +79,28 @@ def lr_polynomial_decay(global_step):
     return lr
 
 
-inputs = keras.layers.Input(
-    shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
-feature = res3d_clstm_mobilenet(inputs, seq_len, weight_decay)
-flatten = keras.layers.Flatten(name='Flatten')(feature)
+inputs_RGB = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
+inputs_Flow = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
+
+feature_RGB = res3d_clstm_mobilenet(inputs_RGB, seq_len, weight_decay, 'RGB')
+feature_Flow = res3d_clstm_mobilenet(inputs_Flow, seq_len, weight_decay, 'Flow')
+
+x = keras.layers.Concatenate(axis=-1)([feature_RGB, feature_Flow])
+
+flatten = keras.layers.Flatten(name='Flatten_%s'%str_modality)(x)
 classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
-                             kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
+                    kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
-model = keras.models.Model(inputs=inputs, outputs=outputs)
+
+model_Fusion  = keras.models.Model(inputs=[inputs_RGB, inputs_Flow], outputs=outputs)
+# model_Fusion  = keras.models.Model(inputs=inputs_RGB, outputs=outputs)
+print(model_Fusion.summary())
 
 # muli GPU
 # model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-pretrained_model = '%sisogr_rgb_weights.09-2.99.h5'%(model_prefix)
+pretrained_model = '%sjester_rgb_weights.10-0.71.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=True)
 

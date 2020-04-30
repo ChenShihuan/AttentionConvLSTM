@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import io
 import sys
 sys.path.append("./networks")
@@ -56,8 +56,8 @@ elif cfg_dataset == ISOGD:
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-model_prefix = './models/'
-weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
+model_prefix = './models_old/SE_ResNet/'
+weights_file = '%s/%s_SEResNet_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
 _, train_labels = data.load_iso_video_list(training_datalist)
@@ -69,8 +69,8 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
-    end_learning_rate = 0.000001
+    learning_rate = 0.01
+    end_learning_rate = 0.001
     decay_steps = train_steps*nb_epoch
     power = 0.9
     p = float(global_step)/float(decay_steps)
@@ -92,7 +92,7 @@ model = keras.models.Model(inputs=inputs, outputs=outputs)
 # model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-pretrained_model = '%sisogr_rgb_weights.00-3.66.h5'%(model_prefix)
+pretrained_model = '%sisogr_rgb_SEResNet_weights.08-3.29.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=True)
 

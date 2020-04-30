@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import io
 import sys
 sys.path.append("./networks")
@@ -25,8 +25,8 @@ Flow = 2
 JESTER = 0
 ISOGD = 1
 
-cfg_modality = RGB
-cfg_dataset = JESTER
+cfg_modality = Flow
+cfg_dataset = ISOGD
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -55,7 +55,7 @@ elif cfg_dataset == ISOGD:
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-model_prefix = './models/'
+model_prefix = './models_old/'
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
@@ -103,29 +103,29 @@ model.compile(optimizer=optimizer,
 lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
-# model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-#                                    save_best_only=False, save_weights_only=True, mode='auto')
-# callbacks = [lr_reducer, model_checkpoint]
+model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
+                                   save_best_only=False, save_weights_only=True, mode='auto')
+callbacks = [lr_reducer, model_checkpoint]
 
-# if cfg_dataset == JESTER:
-#     model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         steps_per_epoch=train_steps,
-#                         epochs=nb_epoch,
-#                         verbose=1,
-#                         callbacks=callbacks,
-#                         validation_data=jesterTestImageGenerator(
-#                             testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         validation_steps=test_steps,
-#                         initial_epoch=init_epoch,
-#                         )
-# elif cfg_dataset == ISOGD:
-#     model.fit_generator(isoTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         steps_per_epoch=train_steps,
-#                         epochs=nb_epoch,
-#                         verbose=1,
-#                         callbacks=callbacks,
-#                         validation_data=isoTestImageGenerator(
-#                             testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         validation_steps=test_steps,
-#                         initial_epoch=init_epoch,
-#                         )
+if cfg_dataset == JESTER:
+    model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        steps_per_epoch=train_steps,
+                        epochs=nb_epoch,
+                        verbose=1,
+                        callbacks=callbacks,
+                        validation_data=jesterTestImageGenerator(
+                            testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        validation_steps=test_steps,
+                        initial_epoch=init_epoch,
+                        )
+elif cfg_dataset == ISOGD:
+    model.fit_generator(isoTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        steps_per_epoch=train_steps,
+                        epochs=nb_epoch,
+                        verbose=1,
+                        callbacks=callbacks,
+                        validation_data=isoTestImageGenerator(
+                            testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
+                        validation_steps=test_steps,
+                        initial_epoch=init_epoch,
+                        )

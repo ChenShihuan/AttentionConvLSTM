@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 import io
 import sys
 sys.path.append("./networks")
@@ -37,7 +37,7 @@ if cfg_dataset == JESTER:
     seq_len = 16
     batch_size = 16
     num_classes = 27
-    testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
+    testing_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
 elif cfg_dataset == ISOGD:
     seq_len = 32
     batch_size = 8
@@ -46,7 +46,7 @@ elif cfg_dataset == ISOGD:
 
 weight_decay = 0.00005
 # model_prefix = '/raid/gmzhu/tensorflow/ConvLSTMForGR/models/'
-model_prefix = './models'
+model_prefix = './models_old/'
 
 inputs = keras.layers.Input(shape=(seq_len, 112, 112, 3),
                             batch_shape=(batch_size, seq_len, 112, 112, 3))
@@ -63,12 +63,10 @@ model.compile(optimizer=optimizer,
 print(model.summary())
 
 if cfg_dataset == JESTER:
-    pretrained_model = '%s/jester_%s_gatedclstm_weights.h5' % (
-        model_prefix, str_modality)
+    pretrained_model = '%sjester_%s_gatedclstm_weights.h5' % (model_prefix, str_modality)
 elif cfg_dataset == ISOGD:
-    # pretrained_model = '%s/isogr_%s_gatedclstm_weights.h5' % (
-    #     model_prefix, str_modality)
-    pretrained_model = '%s/isogr_rgb_weights.08-2.75.h5'%(model_prefix)
+    pretrained_model = '%sisogr_%s_gatedclstm_weights.h5' % (model_prefix, str_modality)
+    # pretrained_model = '%s/isogr_rgb_weights.08-2.75.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=False)
 for i in range(len(model.trainable_weights)):
