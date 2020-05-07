@@ -59,23 +59,23 @@ class CrossBlock(keras.layers.Layer):
       x2 = inputs[1]
 
       inputs_shapes = keras.backend.int_shape(x1)
-      print('shape',inputs_shapes)
+      # print('shape',inputs_shapes)
 
       x1 = keras.layers.Reshape([-1,1])(x1)
       x2 = keras.layers.Reshape([-1,1])(x2)
-      print('x1',x1.shape)
+      # print('x1',x1.shape)
 
       x = keras.layers.Concatenate(axis=2)([x1, x2])
-      print('Concatenate',x.shape)
+      # print('Concatenate',x.shape)
 
       x = keras.layers.Conv1D(filters = 1, kernel_size = 1, strides=1, padding='same',
                               dilation_rate=1, kernel_initializer='he_normal',
                               kernel_regularizer=l2(self.weight_decay), activity_regularizer=None,
                               kernel_constraint=None, use_bias=False)(x)
-      print('Conv1D',x.shape)
+      # print('Conv1D',x.shape)
 
       x = keras.layers.Reshape([inputs_shapes[1],inputs_shapes[2],inputs_shapes[3],-1])(x)
-      print('Reshape',x.shape)
+      # print('Reshape',x.shape)
       return x
 
 
