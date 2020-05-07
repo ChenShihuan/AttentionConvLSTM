@@ -363,10 +363,34 @@ def mobilenet(inputs, weight_decay, str_modality):
 
   return conv2d_3b
 
-def res3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, str_modality):
+def FusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, str_modality):
 
   # Res3D Block
   res3d_featmap = FusionRes3d(inputs_RGB, inputs_Flow, weight_decay)
+
+  # GatedConvLSTM2D Block
+  clstm2d_1 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_1_%s'%str_modality)(res3d_featmap)
+
+  clstm2d_2 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_2_%s'%str_modality)(clstm2d_1)
+  featmap_2d = keras.layers.Reshape((28,28,256), name='clstm_reshape_%s'%str_modality)(clstm2d_2)
+
+  # MobileNet
+  features = mobilenet(featmap_2d, weight_decay, str_modality)
+  features = keras.layers.Reshape((seq_len/2,4,4,1024), name='feature_reshape_%s'%str_modality)(features)
+  gpooling = keras.layers.AveragePooling3D(pool_size=(seq_len/2,4,4), strides=(seq_len/2,4,4),
+                    padding='valid', name='Average_Pooling_%s'%str_modality)(features)
+
+  return gpooling
+
+def res3d_clstm_mobilenet(inputs, seq_len, weight_decay, str_modality):
+  # Res3D Block
+  res3d_featmap = res3d(inputs, weight_decay, str_modality)
 
   # GatedConvLSTM2D Block
   clstm2d_1 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
