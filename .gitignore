@@ -148,10 +148,7 @@ static
 .git/
 
 # model
+models*/
 models/
-models_old/
-.h5
-
-# output
-nohup.out
-.out
+*.h5
+*.png
