@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import io
 import sys
 sys.path.append("./networks")
@@ -22,6 +22,7 @@ from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 RGB = 0
 Depth = 1
 Flow = 2
+Fusion = 3
 
 # Dataset
 JESTER = 0
@@ -36,6 +37,8 @@ cfg_dataset = ISOGD
 #     str_modality = 'depth'
 # elif cfg_modality == Flow:
 #     str_modality = 'flow'
+# elif cfg_modality==Fusion:
+#   str_modality = 'fusion'
 
 if cfg_dataset == JESTER:
     nb_epoch = 10
@@ -87,7 +90,7 @@ inputs_Flow = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batc
 
 feature = FusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, 'fusion')
 
-flatten = keras.layers.Flatten(name='Flatten_%s'%str_modality)(feature)
+flatten = keras.layers.Flatten(name='Flatten_fusion')(feature)
 classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
