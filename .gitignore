@@ -146,6 +146,7 @@ static
 # .vscode
 .vscode/
 .git/
+.network_image/
 
 # model
 models*/
