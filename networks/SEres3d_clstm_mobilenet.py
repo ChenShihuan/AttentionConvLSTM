@@ -70,7 +70,7 @@ def Res3D_Block1(inputs, weight_decay):
                     name='Conv3D_1')(inputs)
   conv3d_1 = keras.layers.BatchNormalization(name='BatchNorm_1_0')(conv3d_1)
   conv3d_1 = keras.layers.Activation('relu', name='ReLU_1')(conv3d_1)
-  print('c1',conv3d_1)
+  # print('c1',conv3d_1)
   # return conv3d_1
 
   # SEnet_1 = keras.layers.Lambda(SEnet, arguments={'channel':64, 'reduction_ratio':4},name='SE_Block_1')(conv3d_1)
