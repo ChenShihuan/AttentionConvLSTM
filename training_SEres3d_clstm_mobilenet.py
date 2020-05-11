@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 import io
 import sys
 sys.path.append("./networks")
@@ -42,22 +42,24 @@ if cfg_dataset == JESTER:
     seq_len = 16
     batch_size = 16
     num_classes = 27
+    model_prefix = './models_Rewrite_SEnet/JESTER/'
     dataset_name = 'jester_%s' % str_modality
     training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
 elif cfg_dataset == ISOGD:
-    nb_epoch = 10
+    nb_epoch = 40
     init_epoch = 0
     seq_len = 32
     batch_size = 2
     num_classes = 249
+    model_prefix = './models_Rewrite_SEnet/ISOGD/'
     dataset_name = 'isogr_%s' % str_modality
     training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-model_prefix = './models/'
-weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
+
+weights_file = '%s/%s_SEResNet_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
 _, train_labels = data.load_iso_video_list(training_datalist)
@@ -88,11 +90,9 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
 
-# multi GPU
-# model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-pretrained_model = '%sjester_rgb_weights.13-0.86.h5'%(model_prefix)
+pretrained_model = '%sjester_rgb_SEResNet_weights.19-0.68.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=True)
 

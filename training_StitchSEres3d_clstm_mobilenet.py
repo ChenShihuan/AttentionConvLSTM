@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import io
 import sys
 sys.path.append("./networks")
@@ -9,7 +9,7 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet_Fusion import FusionRes3d_clstm_mobilenet
+from SEres3d_clstm_mobilenet_Fusion import clstm_mobilenet, StitchRes3d
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator, isoFusionTrainImageGenerator, isoFusionTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
@@ -18,8 +18,8 @@ from datetime import datetime
 from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 
 ##########################
-
-#Cross Block
+ 
+# Stitch Block
 
 ##########################
 
@@ -27,7 +27,6 @@ from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 RGB = 0
 Depth = 1
 Flow = 2
-Fusion = 3
 
 # Dataset
 JESTER = 0
@@ -42,8 +41,6 @@ cfg_dataset = ISOGD
 #     str_modality = 'depth'
 # elif cfg_modality == Flow:
 #     str_modality = 'flow'
-# elif cfg_modality==Fusion:
-#   str_modality = 'fusion'
 
 if cfg_dataset == JESTER:
     nb_epoch = 10
@@ -58,16 +55,16 @@ elif cfg_dataset == ISOGD:
     nb_epoch = 40
     init_epoch = 0
     seq_len = 32
-    batch_size = 4
+    batch_size = 2
     num_classes = 249
-    dataset_name = 'isogr_Fusion'
+    dataset_name = 'isogr_Stitch'
     RGB_training_datalist = './dataset_splits/IsoGD/train_rgb_list.txt'
     RGB_testing_datalist = './dataset_splits/IsoGD/valid_rgb_list.txt'
     Flow_training_datalist = './dataset_splits/IsoGD/train_flow_list.txt'
     Flow_testing_datalist = './dataset_splits/IsoGD/valid_flow_list.txt'
 
 weight_decay = 0.00005
-model_prefix = './models_Rewrite_SEnet/Fusion/'
+model_prefix = './models/Fusion/'
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
@@ -80,7 +77,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.0005
+    learning_rate = 0.001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -93,9 +90,15 @@ def lr_polynomial_decay(global_step):
 inputs_RGB = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
 inputs_Flow = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
 
-feature = FusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, 'fusion')
+StitchRes3d_feature_RGB, StitchRes3d_feature_Flow = StitchRes3d(inputs_RGB, inputs_Flow, weight_decay)
 
-flatten = keras.layers.Flatten(name='Flatten_fusion')(feature)
+feature_RGB = clstm_mobilenet(StitchRes3d_feature_RGB, seq_len, weight_decay, 'rgb')
+feature_Flow = clstm_mobilenet(StitchRes3d_feature_Flow, seq_len, weight_decay, 'flow')
+
+x = keras.layers.Concatenate(axis=-1)([feature_RGB, feature_Flow])
+
+flatten = keras.layers.Flatten(name='Flatten')(x)
+
 classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
@@ -104,24 +107,16 @@ model = keras.models.Model(inputs=[inputs_RGB, inputs_Flow], outputs=outputs)
 # model_Fusion  = keras.models.Model(inputs=inputs_RGB, outputs=outputs)
 print(model.summary())
 
-plot_model(model,to_file="./network_image/training_FusionSEres3d_clstm_mobilenet.png",show_shapes=True)
+# plot_model(model,to_file="./network_image/training_SEres3d_clstm_mobilenet_Stitch.png",show_shapes=True)
 
 # load pretrained model
-# RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % RGB_pretrained_model
-# model.load_weights(RGB_pretrained_model, by_name=True)
+RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % RGB_pretrained_model
+model.load_weights(RGB_pretrained_model, by_name=True)
 
-# Flow_pretrained_model = '%sjester_flow_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % Flow_pretrained_model
-# model.load_weights(Flow_pretrained_model, by_name=True)
-
-# Fusion_pretrained_model = '%sjester_fusion_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % Fusion_pretrained_model
-# model.load_weights(Fusion_pretrained_model, by_name=True)
-
-pretrained_model = '%sisogr_Fusion_weights.19-2.86.h5'%(model_prefix)
-print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=True)
+Flow_pretrained_model = '%sjester_flow_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % Flow_pretrained_model
+model.load_weights(Flow_pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
@@ -135,7 +130,7 @@ lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-                                   save_best_only=False, save_weights_only=True, mode='auto')
+                                   save_best_only=False, save_weights_only=False, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
 if cfg_dataset == JESTER:
@@ -149,7 +144,7 @@ if cfg_dataset == JESTER:
     #                     validation_steps=test_steps,
     #                     initial_epoch=init_epoch,
     #                     )
-    print 'JESTER still need FLOW dataset to use it'
+    print 'emmmmmmmmmmmmmmmmmmmm'
 elif cfg_dataset == ISOGD:
     model.fit_generator(isoFusionTrainImageGenerator(RGB_training_datalist, Flow_training_datalist, batch_size, seq_len, num_classes),
                         steps_per_epoch=train_steps,
@@ -160,3 +155,4 @@ elif cfg_dataset == ISOGD:
                         validation_steps=test_steps,
                         initial_epoch=init_epoch,
                         )
+                        

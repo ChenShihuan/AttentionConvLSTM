@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import io
 import sys
 sys.path.append("./networks")
@@ -15,6 +15,7 @@ from datagen import isoTrainImageGenerator, isoTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
+from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 
 # Modality
 RGB = 0
@@ -86,6 +87,7 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
                              kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
+plot_model(model,to_file="training_res3d_clstm_mobilenet_Flow.png",show_shapes=True)
 
 # load pretrained model
 pretrained_model = '%sjester_rgb_weights.04-0.71_pretrained.h5'%(model_prefix)

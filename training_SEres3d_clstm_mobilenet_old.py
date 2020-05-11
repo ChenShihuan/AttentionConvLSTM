@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 import io
 import sys
 sys.path.append("./networks")
@@ -9,12 +9,14 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet import res3d_clstm_mobilenet
+from SEres3d_clstm_mobilenet import res3d_clstm_mobilenet, multiply, SEnet, relu6
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
+from tensorflow.contrib.keras.python.keras.models import load_model
+from tensorflow.contrib.keras.python.keras.utils.generic_utils import CustomObjectScope
 # from tensorflow.contrib.keras.utils import multi_gpu_model
 
 # Modality
@@ -42,24 +44,22 @@ if cfg_dataset == JESTER:
     seq_len = 16
     batch_size = 16
     num_classes = 27
-    model_prefix = './models_Rewrite_SEnet/JESTER/'
     dataset_name = 'jester_%s' % str_modality
     training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
 elif cfg_dataset == ISOGD:
-    nb_epoch = 40
+    nb_epoch = 10
     init_epoch = 0
     seq_len = 32
     batch_size = 2
     num_classes = 249
-    model_prefix = './models_Rewrite_SEnet/ISOGD/'
     dataset_name = 'isogr_%s' % str_modality
     training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-
-weights_file = '%s/%s_SEResNet_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
+model_prefix = './models/'
+weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
 _, train_labels = data.load_iso_video_list(training_datalist)
@@ -71,44 +71,49 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
+    learning_rate = 0.0005
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
     p = float(global_step)/float(decay_steps)
     lr = (learning_rate - end_learning_rate) * \
         np.power(1-p, power)+end_learning_rate
+    # print '%s' %lr
     return lr
 
 
-inputs = keras.layers.Input(
-    shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
-feature = res3d_clstm_mobilenet(inputs, seq_len, weight_decay)
-flatten = keras.layers.Flatten(name='Flatten')(feature)
-classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
-                             kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
-outputs = keras.layers.Activation('softmax', name='Output')(classes)
-model = keras.models.Model(inputs=inputs, outputs=outputs)
+# inputs = keras.layers.Input(
+#     shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
+# feature = res3d_clstm_mobilenet(inputs, seq_len, weight_decay)
+# flatten = keras.layers.Flatten(name='Flatten')(feature)
+# classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
+#                              kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
+# outputs = keras.layers.Activation('softmax', name='Output')(classes)
+# model = keras.models.Model(inputs=inputs, outputs=outputs)
 
+# multi GPU
+# model = multi_gpu_model(model, gpus=2)
 
 # load pretrained model
-pretrained_model = '%sjester_rgb_SEResNet_weights.19-0.68_pretrained.h5'%(model_prefix)
+pretrained_model = '%sjester_rgb_weights.24-0.68.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=True)
+# model.load_weights(pretrained_model, by_name=True)
+with CustomObjectScope({'keras':keras, 'np':np, 'l2':l2, 'multiply':multiply, 'SEnet':SEnet, 'relu6': relu6}):
+    model = load_model(pretrained_model)
 
-for i in range(len(model.trainable_weights)):
-    print model.trainable_weights[i]
+# for i in range(len(model.trainable_weights)):
+#     print model.trainable_weights[i]
 
-optimizer = keras.optimizers.SGD(
-    lr=0.001, decay=0, momentum=0.9, nesterov=False)
-model.compile(optimizer=optimizer,
-              loss='categorical_crossentropy', metrics=['accuracy'])
+# optimizer = keras.optimizers.SGD(
+#     lr=0.001, decay=0, momentum=0.9, nesterov=False)
+# model.compile(optimizer=optimizer,
+#               loss='categorical_crossentropy', metrics=['accuracy'])
 
 lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-                                   save_best_only=False, save_weights_only=False, mode='auto')
+                                   save_best_only=False, save_weights_only=True, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
 if cfg_dataset == JESTER:

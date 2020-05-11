@@ -9,23 +9,25 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet_Fusion import res3d_clstm_mobilenet
+from SEres3d_clstm_mobilenet_Fusion import res3d_clstm_mobilenet, FusionRes3d_clstm_mobilenet
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
+from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 
 # Modality
 RGB = 0
 Depth = 1
 Flow = 2
+Fusion = 3
 
 # Dataset
 JESTER = 0
 ISOGD = 1
 
-cfg_modality = RGB
+cfg_modality = Fusion
 cfg_dataset = ISOGD
 
 if cfg_modality==RGB:
@@ -34,6 +36,8 @@ elif cfg_modality==Depth:
   str_modality = 'depth'
 elif cfg_modality==Flow:
   str_modality = 'flow'
+elif cfg_modality==Fusion:
+  str_modality = 'fusion'
 
 if cfg_dataset==JESTER:
   nb_epoch = 30
@@ -61,12 +65,13 @@ model_prefix = './models/'
 inputs_RGB = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
 inputs_Flow = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
 
-feature_RGB = res3d_clstm_mobilenet(inputs_RGB, seq_len, weight_decay, 'RGB')
-feature_Flow = res3d_clstm_mobilenet(inputs_Flow, seq_len, weight_decay, 'Flow')
+feature = FusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, str_modality)
+# feature_Flow = res3d_clstm_mobilenet(inputs_Flow, seq_len, weight_decay, 'Flow')
 
-x = keras.layers.Concatenate(axis=-1)([feature_RGB, feature_Flow])
+# x = keras.layers.Concatenate(axis=-1)([feature_RGB, feature_Flow])
+# x = keras.layers.AveragePooling3D(name='GlobalAveragePooling1D')(x)
 
-flatten = keras.layers.Flatten(name='Flatten_%s'%str_modality)(x)
+flatten = keras.layers.Flatten(name='Flatten_%s'%str_modality)(feature)
 classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
                     kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
@@ -74,6 +79,7 @@ outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model_Fusion  = keras.models.Model(inputs=[inputs_RGB, inputs_Flow], outputs=outputs)
 # model_Fusion  = keras.models.Model(inputs=inputs_RGB, outputs=outputs)
 print(model_Fusion.summary())
+plot_model(model_Fusion,to_file="RewriteSEres3d_clstm_mobilenet_Fusion.png",show_shapes=True)
 # model_IsoGD_FLow = keras.models.Model(inputs=inputs, outputs=feature)
 
 # IsoGD_RGB_pretrained_model  = '%sisogr_rgb_gatedclstm_weights.h5'%(model_prefix)

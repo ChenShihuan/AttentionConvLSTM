@@ -24,7 +24,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = JESTER
+cfg_dataset = ISOGD
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
