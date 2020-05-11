@@ -106,57 +106,57 @@ print(model.summary())
 
 plot_model(model,to_file="./network_image/training_FusionSEres3d_clstm_mobilenet_v2.png",show_shapes=True)
 
-# load pretrained model
-# RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % RGB_pretrained_model
-# model.load_weights(RGB_pretrained_model, by_name=True)
+load pretrained model
+RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % RGB_pretrained_model
+model.load_weights(RGB_pretrained_model, by_name=True)
 
-# Flow_pretrained_model = '%sjester_flow_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % Flow_pretrained_model
-# model.load_weights(Flow_pretrained_model, by_name=True)
+Flow_pretrained_model = '%sjester_flow_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % Flow_pretrained_model
+model.load_weights(Flow_pretrained_model, by_name=True)
 
-# Fusion_pretrained_model = '%sjester_fusion_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % Fusion_pretrained_model
-# model.load_weights(Fusion_pretrained_model, by_name=True)
+Fusion_pretrained_model = '%sjester_fusion_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % Fusion_pretrained_model
+model.load_weights(Fusion_pretrained_model, by_name=True)
 
 # pretrained_model = '%sisogr_Fusion_weights.19-2.86.h5'%(model_prefix)
 # print 'Loading pretrained model from %s' % pretrained_model
 # model.load_weights(pretrained_model, by_name=True)
 
-# for i in range(len(model.trainable_weights)):
-#     print model.trainable_weights[i]
+for i in range(len(model.trainable_weights)):
+    print model.trainable_weights[i]
 
-# optimizer = keras.optimizers.SGD(
-#     lr=0.001, decay=0, momentum=0.9, nesterov=False)
-# model.compile(optimizer=optimizer,
-#               loss='categorical_crossentropy', metrics=['accuracy'])
+optimizer = keras.optimizers.SGD(
+    lr=0.001, decay=0, momentum=0.9, nesterov=False)
+model.compile(optimizer=optimizer,
+              loss='categorical_crossentropy', metrics=['accuracy'])
 
-# lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
-# print lr_reducer
+lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
+print lr_reducer
 
-# model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-#                                    save_best_only=False, save_weights_only=True, mode='auto')
-# callbacks = [lr_reducer, model_checkpoint]
+model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
+                                   save_best_only=False, save_weights_only=True, mode='auto')
+callbacks = [lr_reducer, model_checkpoint]
 
-# if cfg_dataset == JESTER:
-#     # model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#     #                     steps_per_epoch=train_steps,
-#     #                     epochs=nb_epoch,
-#     #                     verbose=1,
-#     #                     callbacks=callbacks,
-#     #                     validation_data=jesterTestImageGenerator(
-#     #                         testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#     #                     validation_steps=test_steps,
-#     #                     initial_epoch=init_epoch,
-#     #                     )
-#     print 'JESTER still need FLOW dataset to use it'
-# elif cfg_dataset == ISOGD:
-#     model.fit_generator(isoFusionTrainImageGenerator(RGB_training_datalist, Flow_training_datalist, batch_size, seq_len, num_classes),
-#                         steps_per_epoch=train_steps,
-#                         epochs=nb_epoch,
-#                         verbose=1,
-#                         callbacks=callbacks,
-#                         validation_data=isoFusionTestImageGenerator(RGB_testing_datalist, Flow_testing_datalist, batch_size, seq_len, num_classes),
-#                         validation_steps=test_steps,
-#                         initial_epoch=init_epoch,
-#                         )
+if cfg_dataset == JESTER:
+    # model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
+    #                     steps_per_epoch=train_steps,
+    #                     epochs=nb_epoch,
+    #                     verbose=1,
+    #                     callbacks=callbacks,
+    #                     validation_data=jesterTestImageGenerator(
+    #                         testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
+    #                     validation_steps=test_steps,
+    #                     initial_epoch=init_epoch,
+    #                     )
+    print 'JESTER still need FLOW dataset to use it'
+elif cfg_dataset == ISOGD:
+    model.fit_generator(isoFusionTrainImageGenerator(RGB_training_datalist, Flow_training_datalist, batch_size, seq_len, num_classes),
+                        steps_per_epoch=train_steps,
+                        epochs=nb_epoch,
+                        verbose=1,
+                        callbacks=callbacks,
+                        validation_data=isoFusionTestImageGenerator(RGB_testing_datalist, Flow_testing_datalist, batch_size, seq_len, num_classes),
+                        validation_steps=test_steps,
+                        initial_epoch=init_epoch,
+                        )
