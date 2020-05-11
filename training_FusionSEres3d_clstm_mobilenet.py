@@ -106,7 +106,7 @@ print(model.summary())
 
 plot_model(model,to_file="./network_image/training_FusionSEres3d_clstm_mobilenet_v2.png",show_shapes=True)
 
-load pretrained model
+# load pretrained model
 RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
 print 'Loading pretrained model from %s' % RGB_pretrained_model
 model.load_weights(RGB_pretrained_model, by_name=True)
