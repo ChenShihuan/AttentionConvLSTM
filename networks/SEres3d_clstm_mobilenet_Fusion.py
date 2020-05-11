@@ -2,23 +2,76 @@ import io
 import sys
 import numpy as np
 import tensorflow as tf
-keras=tf.contrib.keras
-l2=keras.regularizers.l2
+from tensorflow.python.framework import tensor_shape
+keras = tf.contrib.keras
+l2 = keras.regularizers.l2
+
+
+class CrossStitchBlock(keras.layers.Layer):
+    def __init__(self, **kwargs):
+        self.self_initializer = keras.initializers.RandomUniform(
+            minval=0.95, maxval=1.05, seed=None)
+        self.cross_initializer = keras.initializers.RandomUniform(
+            minval=-0.05, maxval=0.05, seed=None)
+
+        self.kernel_regularizer=keras.regularizers.l2(0.)
+        # self.kernel_shapes
+        super(CrossStitchBlock, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        # self.input_dim = input_shape[4]
+        # self.output_dim = input_shape[4]
+        self.kernel_shapes = tensor_shape.TensorShape(input_shape[0]).as_list()
+
+        self.alphaAA = self.add_weight(name='alphaAA',
+                                      shape=self.kernel_shapes,
+                                      initializer=self.self_initializer,
+                                      regularizer=self.kernel_regularizer,
+                                      trainable=True)
+        self.alphaAB = self.add_weight(name='alphaAB',
+                                      shape=self.kernel_shapes,
+                                      initializer=self.cross_initializer,
+                                      regularizer=self.kernel_regularizer,
+                                      trainable=True)
+
+        super(CrossStitchBlock, self).build(input_shape)
+
+    def call(self, inputs):
+        assert isinstance(inputs, list)
+        xa, xb = inputs
+
+        xAA = keras.layers.Multiply()([self.alphaAA,xa])
+        xAB = keras.layers.Multiply()([self.alphaAB,xb])
+        xa_estimated = keras.layers.Add(name='xa_estimated')([xAA, xAB])
+        
+        return xa_estimated
+
+    # def compute_output_shape(self, input_shape):
+    #     assert isinstance(input_shape, list)
+    #     shape_a, shape_b = input_shape
+    #     return [xa_estimated, xb_estimated]
+
 
 class CrossBlock(keras.layers.Layer):
   # class Cross_U(nn.Module):
-    # def __init__(self):
-    #     super(Cross_U, self).__init__()
-    #     self.conv1 = nn.Conv1d(2, 1, 1, bias=False)
-    #     self.conv2 = nn.Conv1d(2, 1, 1, bias=False)
+  #   def __init__(self):
+  #       super(Cross_U, self).__init__()
+  #       self.conv1 = nn.Conv1d(2, 1, 1, bias=False)
+  #       self.conv2 = nn.Conv1d(2, 1, 1, bias=False)
+  #       self.conv3 = nn.Conv1d(2, 1, 1, bias=False)
 
-    # def forward(self, x1, x2):
-    #     s = x1.size()
-    #     to1d = lambda x: x.view(s[0], -1, 1)
-    #     conc = torch.cat([to1d(x1), to1d(x2)], dim = 2).permute(0, 2, 1)
-    #     x1 = self.conv1(conc).permute(0, 2, 1).view(s)
-    #     x2 = self.conv2(conc).permute(0, 2, 1).view(s)
-    #     return x1, x2
+  #   def forward(self, x1, x2):
+  #       s = x1.size()
+  #       to1d = lambda x: x.view(s[0], -1, 1)
+  #       conc = torch.cat([to1d(x1), to1d(x2)], dim = 2).permute(0, 2, 1)
+  #       conc = self.conv1(conc).permute(0, 2, 1).view(s)
+
+  #       output1 = torch.cat([to1d(x1), conc], dim = 2).permute(0, 2, 1)
+  #       output1 = self.conv2(output1).permute(0, 2, 1).view(s)
+
+  #       output2 = torch.cat([to1d(x2), conc], dim = 2).permute(0, 2, 1)
+  #       output2 = self.conv3(output2).permute(0, 2, 1).view(s)
+  #       return output1, output2
 
 
     # arr_K = tensor_split(inp_K)
@@ -35,26 +88,22 @@ class CrossBlock(keras.layers.Layer):
 
     # arr_K_M = [self.CU1(k, m) for k, m in zip(arr_K, arr_M)]
     # arr_K = [arr_K_M[i][0] for i in range(0, len(arr_K_M))]
-    # arr_M = [arr_K_M[i][1] for i in range(0, len(arr_K_M))]        
+    # arr_M = [arr_K_M[i][1] for i in range(0, len(arr_K_M))]
     # t_K = self.layer1_K(tensor_merge(arr_K))
     # t_M = self.layer1_M(tensor_merge(arr_M))
     # arr_K = tensor_split(t_K)
     # arr_M = tensor_split(t_M)
 
-
     # keras.layers.Permute
 
-
-    
     def __init__(self, weight_decay, **kwargs):
         super(CrossBlock,self).__init__(**kwargs)
         # self.reduction_ratio = reduction_ratio
         self.weight_decay = weight_decay
     def build(self,input_shape):
-    	#input_shape
-    	super(CrossBlock, self).build(input_shape)
+      # input_shape
+      super(CrossBlock, self).build(input_shape)
     def call(self, inputs):
-
       x1 = inputs[0]
       x2 = inputs[1]
 
@@ -63,20 +112,17 @@ class CrossBlock(keras.layers.Layer):
 
       x1 = keras.layers.Reshape([-1,1])(x1)
       x2 = keras.layers.Reshape([-1,1])(x2)
-      # print('x1',x1.shape)
 
       x = keras.layers.Concatenate(axis=2)([x1, x2])
-      # print('Concatenate',x.shape)
 
       x = keras.layers.Conv1D(filters = 1, kernel_size = 1, strides=1, padding='same',
                               dilation_rate=1, kernel_initializer='he_normal',
                               kernel_regularizer=l2(self.weight_decay), activity_regularizer=None,
                               kernel_constraint=None, use_bias=False)(x)
-      # print('Conv1D',x.shape)
 
       x = keras.layers.Reshape([inputs_shapes[1],inputs_shapes[2],inputs_shapes[3],-1])(x)
-      # print('Reshape',x.shape)
       return x
+
 
 
 def multiply(a):
@@ -122,8 +168,8 @@ class SeBlock(keras.layers.Layer):
         self.reduction_ratio = reduction_ratio
         self.channel = channel
     def build(self,input_shape):
-    	#input_shape
-    	pass
+      # input_shape
+      pass
     def call(self, inputs):
         x = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling')(inputs)
         x = keras.layers.Dense(self.channel / self.reduction_ratio, activation='linear', kernel_initializer='he_normal',
@@ -134,7 +180,7 @@ class SeBlock(keras.layers.Layer):
         x = keras.backend.sigmoid(x)
         x = keras.layers.Reshape([1,1,1,self.channel], name='SE_Reshape')(x)
         return keras.layers.Multiply()([inputs,x])
-        #return inputs*x
+        # return inputs*x
 
 def Res3D_Block1(inputs, weight_decay, str_modality):
 
@@ -305,6 +351,33 @@ def FusionRes3d(inputs_RGB, inputs_Flow, weight_decay):
 def relu6(x):
   return keras.activations.relu(x,max_value=6)
 
+def StitchRes3d(inputs_RGB, inputs_Flow, weight_decay):
+  res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
+  res3d_1_Flow = Res3D_Block1(inputs_Flow, weight_decay, 'flow')
+
+  Stitch_1_RGB = CrossStitchBlock(name='Stitch_1_RGB')([res3d_1_RGB, res3d_1_Flow])
+  Stitch_1_Flow = CrossStitchBlock(name='Stitch_1_Flow')([res3d_1_Flow, res3d_1_RGB])
+
+  res3d_2_RGB = Res3D_Block2(Stitch_1_RGB, weight_decay, 'rgb')
+  res3d_2_Flow = Res3D_Block2(Stitch_1_Flow, weight_decay, 'flow')
+  Stitch_2_RGB = CrossStitchBlock(name='Stitch_2_RGB')([res3d_2_RGB, res3d_2_Flow])
+  Stitch_2_Flow = CrossStitchBlock(name='Stitch_2_Flow')([res3d_2_Flow, res3d_2_RGB])
+
+  res3d_3_RGB = Res3D_Block3(Stitch_2_RGB, weight_decay, 'rgb')
+  res3d_3_Flow = Res3D_Block3(Stitch_2_Flow, weight_decay, 'flow')
+  Stitch_3_RGB = CrossStitchBlock(name='Stitch_3_RGB')([res3d_3_RGB, res3d_3_Flow])
+  Stitch_3_Flow = CrossStitchBlock(name='Stitch_3_Flow')([res3d_3_Flow, res3d_3_RGB])
+
+  res3d_4_RGB = Res3D_Block4(Stitch_3_RGB, weight_decay, 'rgb')
+  res3d_4_Flow = Res3D_Block4(Stitch_3_Flow, weight_decay, 'flow')
+  Stitch_4_RGB = CrossStitchBlock(name='Stitch_4_RGB')([res3d_4_RGB, res3d_4_Flow])
+  Stitch_4_Flow = CrossStitchBlock(name='Stitch_4_Flow')([res3d_4_Flow, res3d_4_RGB])
+
+  return Stitch_4_RGB, Stitch_4_Flow
+
+def relu6(x):
+  return keras.activations.relu(x,max_value=6)
+
 def mobilenet(inputs, weight_decay, str_modality):
 
   conv2d_1a = keras.layers.SeparableConv2D(256, (3,3), strides=(1,1), padding='same',
@@ -397,6 +470,28 @@ def res3d_clstm_mobilenet(inputs, seq_len, weight_decay, str_modality):
                       kernel_initializer='he_normal', recurrent_initializer='he_normal',
                       kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
                       return_sequences=True, name='gatedclstm2d_1_%s'%str_modality)(res3d_featmap)
+
+  clstm2d_2 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_2_%s'%str_modality)(clstm2d_1)
+  featmap_2d = keras.layers.Reshape((28,28,256), name='clstm_reshape_%s'%str_modality)(clstm2d_2)
+
+  # MobileNet
+  features = mobilenet(featmap_2d, weight_decay, str_modality)
+  features = keras.layers.Reshape((seq_len/2,4,4,1024), name='feature_reshape_%s'%str_modality)(features)
+  gpooling = keras.layers.AveragePooling3D(pool_size=(seq_len/2,4,4), strides=(seq_len/2,4,4),
+                    padding='valid', name='Average_Pooling_%s'%str_modality)(features)
+
+  return gpooling
+
+def clstm_mobilenet(inputs, seq_len, weight_decay, str_modality):
+
+  # GatedConvLSTM2D Block
+  clstm2d_1 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_1_%s'%str_modality)(inputs)
 
   clstm2d_2 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
                       kernel_initializer='he_normal', recurrent_initializer='he_normal',
