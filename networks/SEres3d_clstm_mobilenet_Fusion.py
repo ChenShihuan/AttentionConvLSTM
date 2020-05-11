@@ -96,6 +96,7 @@ class CrossBlock(keras.layers.Layer):
 
     # keras.layers.Permute
 
+    # FusionBlock verion 2
     def __init__(self, weight_decay, **kwargs):
         super(CrossBlock,self).__init__(**kwargs)
         # self.reduction_ratio = reduction_ratio
@@ -103,6 +104,42 @@ class CrossBlock(keras.layers.Layer):
     def build(self,input_shape):
       # input_shape
       super(CrossBlock, self).build(input_shape)
+    def call(self, inputs):
+      # x1 means the self channel, and x2 means another
+      x1 = inputs[0]
+      x2 = inputs[1]
+      inputs_shapes = keras.backend.int_shape(x1)
+      # print('shape',inputs_shapes)
+
+      x1 = keras.layers.Reshape([-1,1])(x1)
+      x2 = keras.layers.Reshape([-1,1])(x2)
+
+      # Fusion x1 and x2
+      Conc = keras.layers.Concatenate(axis=2)([x1, x2])
+      Conc = keras.layers.Conv1D(filters = 1, kernel_size = 1, strides=1, padding='same',
+                              dilation_rate=1, kernel_initializer='he_normal',
+                              kernel_regularizer=l2(self.weight_decay), activity_regularizer=None,
+                              kernel_constraint=None, use_bias=False)(Conc)
+
+      # Fusion conc and x1
+      Output = keras.layers.Concatenate(axis=2)([x1, Conc])
+      Output = keras.layers.Conv1D(filters = 1, kernel_size = 1, strides=1, padding='same',
+                              dilation_rate=1, kernel_initializer='he_normal',
+                              kernel_regularizer=l2(self.weight_decay), activity_regularizer=None,
+                              kernel_constraint=None, use_bias=False)(Output)      
+
+      Output = keras.layers.Reshape([inputs_shapes[1],inputs_shapes[2],inputs_shapes[3],-1])(Output)
+      return Output
+
+class CatConvBlock(keras.layers.Layer):
+    # FusionBlock verion 1
+    def __init__(self, weight_decay, **kwargs):
+        super(CatConvBlock,self).__init__(**kwargs)
+        # self.reduction_ratio = reduction_ratio
+        self.weight_decay = weight_decay
+    def build(self,input_shape):
+      # input_shape
+      super(CatConvBlock, self).build(input_shape)
     def call(self, inputs):
       x1 = inputs[0]
       x2 = inputs[1]
@@ -122,8 +159,6 @@ class CrossBlock(keras.layers.Layer):
 
       x = keras.layers.Reshape([inputs_shapes[1],inputs_shapes[2],inputs_shapes[3],-1])(x)
       return x
-
-
 
 def multiply(a):
     x = np.multiply(a[0], a[1])
@@ -331,21 +366,26 @@ def res3d(inputs, weight_decay, str_modality):
   return res3d_4
 
 def FusionRes3d(inputs_RGB, inputs_Flow, weight_decay):
+  # FusionRes3d verion 2
   res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
   res3d_1_Flow = Res3D_Block1(inputs_Flow, weight_decay, 'flow')
-  res3d_1 = CrossBlock(weight_decay)([res3d_1_RGB, res3d_1_Flow])
+  Cross_1_RGB = CrossBlock(weight_decay,name='Cross_1_RGB')([res3d_1_RGB, res3d_1_Flow])
+  Cross_1_Flow = CrossBlock(weight_decay,name='Cross_1_Flow')([res3d_1_Flow, res3d_1_RGB])
 
-  res3d_2_RGB = Res3D_Block2(res3d_1, weight_decay, 'rgb')
-  res3d_2_Flow = Res3D_Block2(res3d_1, weight_decay, 'flow')
-  res3d_2 = CrossBlock(weight_decay)([res3d_2_RGB, res3d_2_Flow])
+  res3d_2_RGB = Res3D_Block2(Cross_1_RGB, weight_decay, 'rgb')
+  res3d_2_Flow = Res3D_Block2(Cross_1_Flow, weight_decay, 'flow')
+  Cross_2_RGB = CrossBlock(weight_decay,name='Cross_2_RGB')([res3d_2_RGB, res3d_2_Flow])
+  Cross_2_Flow = CrossBlock(weight_decay,name='Cross_2_Flow')([res3d_2_Flow, res3d_2_RGB])
 
-  res3d_3_RGB = Res3D_Block3(res3d_2, weight_decay, 'rgb')
-  res3d_3_Flow = Res3D_Block3(res3d_2, weight_decay, 'flow')
-  res3d_3 = CrossBlock(weight_decay)([res3d_3_RGB, res3d_3_Flow])
+  res3d_3_RGB = Res3D_Block3(Cross_2_RGB, weight_decay, 'rgb')
+  res3d_3_Flow = Res3D_Block3(Cross_2_Flow, weight_decay, 'flow')
+  Cross_3_RGB = CrossBlock(weight_decay,name='Cross_3_RGB')([res3d_3_RGB, res3d_3_Flow])
+  Cross_3_Flow = CrossBlock(weight_decay,name='Cross_3_Flow')([res3d_3_Flow, res3d_3_RGB])
 
-  res3d_4_RGB = Res3D_Block4(res3d_3, weight_decay, 'rgb')
-  res3d_4_Flow = Res3D_Block4(res3d_3, weight_decay, 'flow')
-  res3d_4 = CrossBlock(weight_decay)([res3d_4_RGB, res3d_4_Flow])
+  res3d_4_RGB = Res3D_Block4(Cross_3_RGB, weight_decay, 'rgb')
+  res3d_4_Flow = Res3D_Block4(Cross_3_Flow, weight_decay, 'flow')
+  res3d_4 = CatConvBlock(weight_decay,name='CatConvBlock')([res3d_4_RGB, res3d_4_Flow])
+
   return res3d_4
 
 def relu6(x):
