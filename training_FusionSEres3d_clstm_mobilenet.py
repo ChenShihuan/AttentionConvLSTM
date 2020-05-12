@@ -135,7 +135,7 @@ lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-                                   save_best_only=False, save_weights_only=True, mode='auto')
+                                   save_best_only=False, save_weights_only=False, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
 if cfg_dataset == JESTER:
