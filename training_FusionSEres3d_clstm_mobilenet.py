@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 import io
 import sys
 sys.path.append("./networks")
@@ -9,13 +9,15 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet_Fusion import FusionRes3d_clstm_mobilenet
+from SEres3d_clstm_mobilenet_Fusion import FusionRes3d_clstm_mobilenet,SeBlock,CrossBlock,CatConvBlock,relu6
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator, isoFusionTrainImageGenerator, isoFusionTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
 from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
+from tensorflow.contrib.keras.python.keras.models import load_model
+from tensorflow.contrib.keras.python.keras.utils.generic_utils import CustomObjectScope
 
 ##########################
 
@@ -55,12 +57,12 @@ if cfg_dataset == JESTER:
     # training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
     # testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
 elif cfg_dataset == ISOGD:
-    nb_epoch = 40
+    nb_epoch = 80
     init_epoch = 0
     seq_len = 32
-    batch_size = 4
+    batch_size = 64
     num_classes = 249
-    dataset_name = 'isogr_Fusion'
+    dataset_name = 'isogr_Fusion_128'
     RGB_training_datalist = './dataset_splits/IsoGD/train_rgb_list.txt'
     RGB_testing_datalist = './dataset_splits/IsoGD/valid_rgb_list.txt'
     Flow_training_datalist = './dataset_splits/IsoGD/train_flow_list.txt'
@@ -80,7 +82,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.0005
+    learning_rate = 0.001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -104,7 +106,7 @@ model = keras.models.Model(inputs=[inputs_RGB, inputs_Flow], outputs=outputs)
 # model_Fusion  = keras.models.Model(inputs=inputs_RGB, outputs=outputs)
 print(model.summary())
 
-plot_model(model,to_file="./network_image/training_FusionSEres3d_clstm_mobilenet_v2.png",show_shapes=True)
+# plot_model(model,to_file="./network_image/training_FusionSEres3d_clstm_mobilenet_v2.png",show_shapes=True)
 
 # load pretrained model
 RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)
@@ -123,13 +125,21 @@ model.load_weights(Fusion_pretrained_model, by_name=True)
 # print 'Loading pretrained model from %s' % pretrained_model
 # model.load_weights(pretrained_model, by_name=True)
 
-for i in range(len(model.trainable_weights)):
-    print model.trainable_weights[i]
+# pretrained_model = '%sisogr_Fusion_weights.15-3.02.h5'%(model_prefix)
+# print 'Loading pretrained model from %s' % pretrained_model
+# model.load_weights(pretrained_model, by_name=True)
+
+# for i in range(len(model.trainable_weights)):
+#     print model.trainable_weights[i]
 
 optimizer = keras.optimizers.SGD(
     lr=0.001, decay=0, momentum=0.9, nesterov=False)
 model.compile(optimizer=optimizer,
               loss='categorical_crossentropy', metrics=['accuracy'])
+
+
+# with CustomObjectScope({'keras':keras, 'np':np, 'l2':l2, 'SeBlock':SeBlock,'CatConvBlock':CatConvBlock, 'relu6': relu6,'CrossBlock':CrossBlock}):
+#     model = load_model(pretrained_model)
 
 lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer

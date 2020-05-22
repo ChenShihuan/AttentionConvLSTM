@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 import io
 import sys
 sys.path.append("./networks")
@@ -27,7 +27,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = JESTER
+cfg_dataset = ISOGD
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -71,7 +71,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
+    learning_rate = 0.0001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9

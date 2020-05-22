@@ -8,28 +8,26 @@ l2 = keras.regularizers.l2
 
 
 class CrossStitchBlock(keras.layers.Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, batch_size, channel, **kwargs):
         self.self_initializer = keras.initializers.RandomUniform(
             minval=0.95, maxval=1.05, seed=None)
         self.cross_initializer = keras.initializers.RandomUniform(
             minval=-0.05, maxval=0.05, seed=None)
 
+        self.batch_size = batch_size
         self.kernel_regularizer=keras.regularizers.l2(0.)
-        # self.kernel_shapes
+        self.channel = channel
         super(CrossStitchBlock, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        # self.input_dim = input_shape[4]
-        # self.output_dim = input_shape[4]
-        self.kernel_shapes = tensor_shape.TensorShape(input_shape[0]).as_list()
 
         self.alphaAA = self.add_weight(name='alphaAA',
-                                      shape=self.kernel_shapes,
+                                      shape=[self.batch_size,1,1,1,self.channel],
                                       initializer=self.self_initializer,
                                       regularizer=self.kernel_regularizer,
                                       trainable=True)
         self.alphaAB = self.add_weight(name='alphaAB',
-                                      shape=self.kernel_shapes,
+                                      shape=[self.batch_size,1,1,1,self.channel],
                                       initializer=self.cross_initializer,
                                       regularizer=self.kernel_regularizer,
                                       trainable=True)
@@ -42,6 +40,7 @@ class CrossStitchBlock(keras.layers.Layer):
 
         xAA = keras.layers.Multiply()([self.alphaAA,xa])
         xAB = keras.layers.Multiply()([self.alphaAB,xb])
+
         xa_estimated = keras.layers.Add(name='xa_estimated')([xAA, xAB])
         
         return xa_estimated
@@ -365,6 +364,25 @@ def res3d(inputs, weight_decay, str_modality):
 
   return res3d_4
 
+def CatConvFusionRes3d(inputs_RGB, inputs_Flow, weight_decay):
+  # FusionRes3d verion 1
+  res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
+  res3d_1_Flow = Res3D_Block1(inputs_Flow, weight_decay, 'flow')
+  res3d_1 = CatConvBlock(weight_decay)([res3d_1_RGB, res3d_1_Flow])
+
+  res3d_2_RGB = Res3D_Block2(res3d_1, weight_decay, 'rgb')
+  res3d_2_Flow = Res3D_Block2(res3d_1, weight_decay, 'flow')
+  res3d_2 = CatConvBlock(weight_decay)([res3d_2_RGB, res3d_2_Flow])
+
+  res3d_3_RGB = Res3D_Block3(res3d_2, weight_decay, 'rgb')
+  res3d_3_Flow = Res3D_Block3(res3d_2, weight_decay, 'flow')
+  res3d_3 = CatConvBlock(weight_decay)([res3d_3_RGB, res3d_3_Flow])
+
+  res3d_4_RGB = Res3D_Block4(res3d_3, weight_decay, 'rgb')
+  res3d_4_Flow = Res3D_Block4(res3d_3, weight_decay, 'flow')
+  res3d_4 = CatConvBlock(weight_decay)([res3d_4_RGB, res3d_4_Flow])
+  return res3d_4
+
 def FusionRes3d(inputs_RGB, inputs_Flow, weight_decay):
   # FusionRes3d verion 2
   res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
@@ -395,23 +413,23 @@ def StitchRes3d(inputs_RGB, inputs_Flow, weight_decay):
   res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
   res3d_1_Flow = Res3D_Block1(inputs_Flow, weight_decay, 'flow')
 
-  Stitch_1_RGB = CrossStitchBlock(name='Stitch_1_RGB')([res3d_1_RGB, res3d_1_Flow])
-  Stitch_1_Flow = CrossStitchBlock(name='Stitch_1_Flow')([res3d_1_Flow, res3d_1_RGB])
+  Stitch_1_RGB = CrossStitchBlock(batch_size=2,channel=64,name='Stitch_1_RGB')([res3d_1_RGB, res3d_1_Flow])
+  Stitch_1_Flow = CrossStitchBlock(batch_size=2,channel=64,name='Stitch_1_Flow')([res3d_1_Flow, res3d_1_RGB])
 
   res3d_2_RGB = Res3D_Block2(Stitch_1_RGB, weight_decay, 'rgb')
   res3d_2_Flow = Res3D_Block2(Stitch_1_Flow, weight_decay, 'flow')
-  Stitch_2_RGB = CrossStitchBlock(name='Stitch_2_RGB')([res3d_2_RGB, res3d_2_Flow])
-  Stitch_2_Flow = CrossStitchBlock(name='Stitch_2_Flow')([res3d_2_Flow, res3d_2_RGB])
+  Stitch_2_RGB = CrossStitchBlock(batch_size=2,channel=64,name='Stitch_2_RGB')([res3d_2_RGB, res3d_2_Flow])
+  Stitch_2_Flow = CrossStitchBlock(batch_size=2,channel=64,name='Stitch_2_Flow')([res3d_2_Flow, res3d_2_RGB])
 
   res3d_3_RGB = Res3D_Block3(Stitch_2_RGB, weight_decay, 'rgb')
   res3d_3_Flow = Res3D_Block3(Stitch_2_Flow, weight_decay, 'flow')
-  Stitch_3_RGB = CrossStitchBlock(name='Stitch_3_RGB')([res3d_3_RGB, res3d_3_Flow])
-  Stitch_3_Flow = CrossStitchBlock(name='Stitch_3_Flow')([res3d_3_Flow, res3d_3_RGB])
+  Stitch_3_RGB = CrossStitchBlock(batch_size=2,channel=128,name='Stitch_3_RGB')([res3d_3_RGB, res3d_3_Flow])
+  Stitch_3_Flow = CrossStitchBlock(batch_size=2,channel=128,name='Stitch_3_Flow')([res3d_3_Flow, res3d_3_RGB])
 
   res3d_4_RGB = Res3D_Block4(Stitch_3_RGB, weight_decay, 'rgb')
   res3d_4_Flow = Res3D_Block4(Stitch_3_Flow, weight_decay, 'flow')
-  Stitch_4_RGB = CrossStitchBlock(name='Stitch_4_RGB')([res3d_4_RGB, res3d_4_Flow])
-  Stitch_4_Flow = CrossStitchBlock(name='Stitch_4_Flow')([res3d_4_Flow, res3d_4_RGB])
+  Stitch_4_RGB = CrossStitchBlock(batch_size=2,channel=256,name='Stitch_4_RGB')([res3d_4_RGB, res3d_4_Flow])
+  Stitch_4_Flow = CrossStitchBlock(batch_size=2,channel=256,name='Stitch_4_Flow')([res3d_4_Flow, res3d_4_RGB])
 
   return Stitch_4_RGB, Stitch_4_Flow
 
@@ -480,6 +498,31 @@ def FusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, 
 
   # Res3D Block
   res3d_featmap = FusionRes3d(inputs_RGB, inputs_Flow, weight_decay)
+
+  # GatedConvLSTM2D Block
+  clstm2d_1 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_1_%s'%str_modality)(res3d_featmap)
+
+  clstm2d_2 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
+                      kernel_initializer='he_normal', recurrent_initializer='he_normal',
+                      kernel_regularizer=l2(weight_decay), recurrent_regularizer=l2(weight_decay),
+                      return_sequences=True, name='gatedclstm2d_2_%s'%str_modality)(clstm2d_1)
+  featmap_2d = keras.layers.Reshape((28,28,256), name='clstm_reshape_%s'%str_modality)(clstm2d_2)
+
+  # MobileNet
+  features = mobilenet(featmap_2d, weight_decay, str_modality)
+  features = keras.layers.Reshape((seq_len/2,4,4,1024), name='feature_reshape_%s'%str_modality)(features)
+  gpooling = keras.layers.AveragePooling3D(pool_size=(seq_len/2,4,4), strides=(seq_len/2,4,4),
+                    padding='valid', name='Average_Pooling_%s'%str_modality)(features)
+
+  return gpooling
+
+def CatConvFusionRes3d_clstm_mobilenet(inputs_RGB, inputs_Flow, seq_len, weight_decay, str_modality):
+
+  # Res3D Block
+  res3d_featmap = CatConvFusionRes3d(inputs_RGB, inputs_Flow, weight_decay)
 
   # GatedConvLSTM2D Block
   clstm2d_1 = keras.layers.GatedConvLSTM2D(256, (3,3), strides=(1,1), padding='same',
