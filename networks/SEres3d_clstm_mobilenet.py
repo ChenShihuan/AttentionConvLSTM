@@ -11,6 +11,32 @@ def multiply(a):
     return x
 
 class SeBlock(keras.layers.Layer):
+  # class SeBlock(keras.layers.Layer):
+  #     def __init__(self, channel, reduction_ratio=4,**kwargs):
+  #         super(SeBlock,self).__init__(**kwargs)
+  #         self.reduction_ratio = reduction_ratio
+  #         self.channel = channel
+  #         self.GlobalAveragePooling3D = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling')
+  #         self.Dense_1 = keras.layers.Dense(self.channel / self.reduction_ratio, activation='linear', kernel_initializer='he_normal',
+  #                     kernel_regularizer=l2(self.reduction_ratio), name='Fully_connected_1a')
+  #         self.Activation = keras.layers.Activation('relu', name='SE_ReLU_1')
+  #         self.Dense_2 = keras.layers.Dense(self.channel, activation='linear', kernel_initializer='he_normal',
+  #                     kernel_regularizer=l2(self.reduction_ratio), name='Fully_connected_1b')
+  #         self.sigmoid = keras.backend.sigmoid
+  #         self.Reshape = keras.layers.Reshape([1,1,1,self.channel], name='SE_Reshape')
+  #         self.Multiply = keras.layers.Multiply()
+  #     def build(self,input_shape):
+  #       # input_shape
+  #       super(SeBlock, self).build(input_shape)
+  #     def call(self, inputs):
+  #         x = self.GlobalAveragePooling3D(inputs)
+  #         x = self.Dense_1(x)
+  #         x = self.Activation(x)
+  #         x = self.Dense_2(x)
+  #         x = self.sigmoid(x)
+  #         x = self.Reshape(x)
+
+  #         return self.Multiply([inputs,x])
     def __init__(self, channel, reduction_ratio=4,**kwargs):
         super(SeBlock,self).__init__(**kwargs)
         self.reduction_ratio = reduction_ratio
@@ -30,37 +56,23 @@ class SeBlock(keras.layers.Layer):
         return keras.layers.Multiply()([inputs,x])
         #return inputs*x
 
-def SEnet(conv3d_1, channel, reduction_ratio):
-  # reduction_ratio = 4
-  # Global_Average_Pooling
-  Global_Average_Pooling = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling')(conv3d_1)
-  print('c2',Global_Average_Pooling.shape)
+def SEnet(conv3d, channel, reduction_ratio, str_modality):
 
-  # FC
-  # units=class_num, units=out_dim / ratio
-  Fully_connected_1a = keras.layers.Dense(channel / reduction_ratio, activation='linear', kernel_initializer='he_normal',
-                    kernel_regularizer=l2(reduction_ratio), name='Fully_connected_1a')(Global_Average_Pooling)
-  print('c3',Fully_connected_1a.shape)
-  # ReLU
-  ReLU_1 = keras.layers.Activation('relu', name='SE_ReLU_1')(Fully_connected_1a)
-  print('c4',ReLU_1.shape)
-  # FC
-  # units=class_num, units=out_dim
-  Fully_connected_1b = keras.layers.Dense(channel, activation='linear', kernel_initializer='he_normal',
-                    kernel_regularizer=l2(reduction_ratio), name='Fully_connected_1b')(ReLU_1)
-  print('c5',Fully_connected_1b.shape)
-  # Sigmoid
-  Sigmoid = keras.backend.sigmoid(Fully_connected_1b)
-  print('c6',Sigmoid.shape)
-  # Scale
-  excitation = keras.layers.Reshape([1,1,1,channel], name='SE_Reshape')(Sigmoid)
-  print('c7_0',excitation.shape)
+  Global_Average_Pooling = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling_%s'%str_modality)(conv3d)
 
-  # scale = keras.layers.Add(name='SE_scale')([conv3d_1, excitation])
-  scale = keras.layers.Lambda(multiply, name='SE_scale')([conv3d_1, excitation])
-  # scale = keras.layers.Reshape([32,56,56,64], name='SE_Reshape')(scale)
-  print('c7_1',scale)
-  return (scale)
+  Fully_connected_a = keras.layers.Dense(channel / reduction_ratio, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(reduction_ratio), name='SE_Fully_connected_a_%s'%str_modality)(Global_Average_Pooling)
+
+  ReLU_1 = keras.layers.Activation('relu', name='SE_ReLU_%s'%str_modality)(Fully_connected_a)
+
+  Fully_connected_b = keras.layers.Dense(channel, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(reduction_ratio), name='SE_Fully_connected_b_%s'%str_modality)(ReLU_1)
+
+  Sigmoid = keras.layers.Activation('sigmoid',name='SE_sigmoid_%s'%str_modality)(Fully_connected_b)
+  excitation = keras.layers.Reshape([1,1,1,channel], name='SE_Reshape_%s'%str_modality)(Sigmoid)
+  scale = keras.layers.Multiply(name='SE_Multiply_%s'%str_modality)([conv3d, excitation])
+
+  return scale
 
 def Res3D_Block1(inputs, weight_decay):
   # Res3D Block 1
@@ -70,13 +82,11 @@ def Res3D_Block1(inputs, weight_decay):
                     name='Conv3D_1')(inputs)
   conv3d_1 = keras.layers.BatchNormalization(name='BatchNorm_1_0')(conv3d_1)
   conv3d_1 = keras.layers.Activation('relu', name='ReLU_1')(conv3d_1)
-  # print('c1',conv3d_1)
-  # return conv3d_1
 
-  # SEnet_1 = keras.layers.Lambda(SEnet, arguments={'channel':64, 'reduction_ratio':4},name='SE_Block_1')(conv3d_1)
-  SEnet_1 = SeBlock(channel=64, name='SE_Block_1')(conv3d_1)
-  return SEnet_1
+  # SEnet Block2
+  conv3d_1 = SEnet(conv3d_1,64,4,'Block1')
 
+  return conv3d_1
 
 def Res3D_Block2(inputs, weight_decay):
   # Res3D Block 2
@@ -110,13 +120,14 @@ def Res3D_Block2(inputs, weight_decay):
                     kernel_regularizer=l2(weight_decay), use_bias=False,
                     name='Conv3D_2b_b')(conv3d_2b_a)
   conv3d_2b_b = keras.layers.BatchNormalization(name='BatchNorm_2b_b')(conv3d_2b_b)
+
+  # SEnet Block2
+  conv3d_2b_b = SEnet(conv3d_2b_b,64,4,'Block2')
+
   conv3d_2b = keras.layers.Add(name='Add_2b')([conv3d_2a, conv3d_2b_b])
   conv3d_2b = keras.layers.Activation('relu', name='ReLU_2b')(conv3d_2b)
 
-  # return conv3d_2b
-  # SEnet_2 = keras.layers.Lambda(SEnet, arguments={'channel':64, 'reduction_ratio':4},name='SE_Block_2')(conv3d_2b)
-  SEnet_2 = SeBlock(channel=64, name='SE_Block_2')(conv3d_2b)
-  return SEnet_2
+  return conv3d_2b
 
 def Res3D_Block3(inputs, weight_decay):
   # Res3D Block 3
@@ -150,13 +161,12 @@ def Res3D_Block3(inputs, weight_decay):
                     kernel_regularizer=l2(weight_decay), use_bias=False,
                     name='Conv3D_3b_b')(conv3d_3b_a)
   conv3d_3b_b = keras.layers.BatchNormalization(name='BatchNorm_3b_b')(conv3d_3b_b)
+  # SEnet Block3
+  conv3d_3b_b = SEnet(conv3d_3b_b,128,4,'Block3')
   conv3d_3b = keras.layers.Add(name='Add_3b')([conv3d_3a, conv3d_3b_b])
   conv3d_3b = keras.layers.Activation('relu', name='ReLU_3b')(conv3d_3b)
 
-  # return conv3d_3b
-  # SEnet_3 = keras.layers.Lambda(SEnet, arguments={'channel':128, 'reduction_ratio':4},name='SE_Block_3')(conv3d_3b)
-  SEnet_3 = SeBlock(channel=128, name='SE_Block_3')(conv3d_3b)
-  return SEnet_3
+  return conv3d_3b
 
 def Res3D_Block4(inputs, weight_decay):
   # Res3D Block 4
@@ -190,13 +200,14 @@ def Res3D_Block4(inputs, weight_decay):
                     kernel_regularizer=l2(weight_decay), use_bias=False,
                     name='Conv3D_4b_b')(conv3d_4b_a)
   conv3d_4b_b = keras.layers.BatchNormalization(name='BatchNorm_4b_b')(conv3d_4b_b)
+
+  # SEnet Block4
+  conv3d_4b_b = SEnet(conv3d_4b_b,256,4,'Block4')
+
   conv3d_4b = keras.layers.Add(name='Add_4b')([conv3d_4a, conv3d_4b_b])
   conv3d_4b = keras.layers.Activation('relu', name='ReLU_4b')(conv3d_4b)
 
-  # return conv3d_4b
-  # SEnet_4 = keras.layers.Lambda(SEnet, arguments={'channel':256, 'reduction_ratio':4},name='SE_Block_4')(conv3d_4b)
-  SEnet_4 = SeBlock(channel=256, name='SE_Block_4')(conv3d_4b)
-  return SEnet_4
+  return conv3d_4b
 
 def res3d(inputs, weight_decay):
   res3d_1 = Res3D_Block1(inputs, weight_decay)  ### (2, 32, 56, 56, 64)

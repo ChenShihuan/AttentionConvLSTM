@@ -15,7 +15,7 @@ from datagen import isoTrainImageGenerator, isoTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
 from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from datetime import datetime
-# from tensorflow.contrib.keras.utils import multi_gpu_model
+from tensorflow.contrib.keras.python.keras.utils.vis_utils import plot_model
 
 # Modality
 RGB = 0
@@ -27,7 +27,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = ISOGD
+cfg_dataset = JESTER
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -42,7 +42,7 @@ if cfg_dataset == JESTER:
     seq_len = 16
     batch_size = 16
     num_classes = 27
-    model_prefix = './models_Rewrite_SEnet/JESTER/'
+    model_prefix = './models_Rewrite_All/JESTER/'
     dataset_name = 'jester_%s' % str_modality
     training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
@@ -52,7 +52,7 @@ elif cfg_dataset == ISOGD:
     seq_len = 32
     batch_size = 2
     num_classes = 249
-    model_prefix = './models_Rewrite_SEnet/ISOGD/'
+    model_prefix = './models_Rewrite_All/ISOGD/'
     dataset_name = 'isogr_%s' % str_modality
     training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
@@ -71,7 +71,7 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 
 def lr_polynomial_decay(global_step):
-    learning_rate = 0.0001
+    learning_rate = 0.001
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -81,20 +81,20 @@ def lr_polynomial_decay(global_step):
     return lr
 
 
-inputs = keras.layers.Input(
-    shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
+inputs = keras.layers.Input(shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
 feature = res3d_clstm_mobilenet(inputs, seq_len, weight_decay)
 flatten = keras.layers.Flatten(name='Flatten')(feature)
 classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
                              kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
-
+print(model.summary())
+plot_model(model,to_file="./network_image/training_SEres3d_clstm_mobilenet.png",show_shapes=True)
 
 # load pretrained model
-pretrained_model = '%sjester_rgb_SEResNet_weights.19-0.68_pretrained.h5'%(model_prefix)
-print 'Loading pretrained model from %s' % pretrained_model
-model.load_weights(pretrained_model, by_name=True)
+# pretrained_model = '%sjester_rgb_SEResNet_weights.19-0.68_pretrained.h5'%(model_prefix)
+# print 'Loading pretrained model from %s' % pretrained_model
+# model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]

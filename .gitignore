@@ -153,3 +153,6 @@ models*/
 models/
 *.h5
 *.png
+
+heatmap.py
+test.py
