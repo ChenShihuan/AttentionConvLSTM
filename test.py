@@ -1,138 +1,107 @@
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
-import io
-import sys
-sys.path.append("./networks")
-import numpy as np
 import tensorflow as tf
 keras=tf.contrib.keras
 l2=keras.regularizers.l2
-K=tf.contrib.keras.backend
-import inputs as data
-from SEres3d_clstm_mobilenet import res3d_clstm_mobilenet
-from callbacks import LearningRateScheduler 
-from datagen import isoTrainImageGenerator, isoTestImageGenerator
-from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
-from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from datetime import datetime
-# from tensorflow.contrib.keras.utils import multi_gpu_model
+from keras import backend as K
 
-# Modality
-RGB = 0
-Depth = 1
-Flow = 2
+class CrossStitchBlock(keras.layers.Layer):
+    def __init__(self, batch_size, channel, **kwargs):
+        self.self_initializer = keras.initializers.RandomUniform(
+            minval=0.95, maxval=1.05, seed=None)
+        self.cross_initializer = keras.initializers.RandomUniform(
+            minval=-0.05, maxval=0.05, seed=None)
 
-# Dataset
-JESTER = 0
-ISOGD = 1
+        self.batch_size = batch_size
+        self.kernel_regularizer=keras.regularizers.l2(0.)
+        self.channel = channel
+        super(CrossStitchBlock, self).__init__(**kwargs)
 
-cfg_modality = RGB
-cfg_dataset = JESTER
+    def build(self, input_shape):
 
-if cfg_modality == RGB:
-    str_modality = 'rgb'
-elif cfg_modality == Depth:
-    str_modality = 'depth'
-elif cfg_modality == Flow:
-    str_modality = 'flow'
+        self.alphaAA = self.add_weight(name='alphaAA',
+                                      shape=[self.batch_size,self.channel],
+                                      initializer=self.self_initializer,
+                                      regularizer=self.kernel_regularizer,
+                                      trainable=True)
+        self.alphaAB = self.add_weight(name='alphaAB',
+                                      shape=[self.batch_size,1,1,1,self.channel],
+                                      initializer=self.cross_initializer,
+                                      regularizer=self.kernel_regularizer,
+                                      trainable=True)
 
-if cfg_dataset == JESTER:
-    nb_epoch = 30
-    init_epoch = 0
-    seq_len = 16
-    batch_size = 16
-    num_classes = 27
-    dataset_name = 'jester_%s' % str_modality
-    training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
-    testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
-elif cfg_dataset == ISOGD:
-    nb_epoch = 10
-    init_epoch = 0
-    seq_len = 32
-    batch_size = 2
-    num_classes = 249
-    RGB_dataset_name = 'isogr_rgb'
-    RGB_training_datalist = './dataset_splits/IsoGD/train_rgb_list.txt'
-    RGB_testing_datalist = './dataset_splits/IsoGD/valid_rgb_list.txt'
-    Flow_dataset_name = 'isogr_flow'
-    Flow_training_datalist = './dataset_splits/IsoGD/train_flow_list.txt'
-    Flow_testing_datalist = './dataset_splits/IsoGD/valid_flow_list.txt'
+        super(CrossStitchBlock, self).build(input_shape)
 
-weight_decay = 0.00005
-model_prefix = './models/'
-weights_file = '%s/RGB_Flow_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
-    model_prefix)
+    def call(self, inputs):
 
-_, train_labels = data.load_iso_video_list(training_datalist)
-train_steps = len(train_labels)/batch_size
-_, test_labels = data.load_iso_video_list(testing_datalist)
-test_steps = len(test_labels)/batch_size
-print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
-    nb_epoch, seq_len, batch_size, weight_decay)
+        xAA = keras.layers.Multiply()([self.alphaAA, inputs])
+        xAB = keras.layers.Multiply()([self.alphaAB, xAA])
 
+        # xa_estimated = keras.layers.Add(name='xa_estimated')([xAA, xAB])
+        
+        return xAB
 
-def lr_polynomial_decay(global_step):
-    learning_rate = 0.001
-    end_learning_rate = 0.000001
-    decay_steps = train_steps*nb_epoch
-    power = 0.9
-    p = float(global_step)/float(decay_steps)
-    lr = (learning_rate - end_learning_rate) * \
-        np.power(1-p, power)+end_learning_rate
-    return lr
+x = tf.ones((3, 3, 3))
+linear_layer = keras.layers.Conv1D(filters = 1, kernel_size = 1, strides=1, padding='same',
+                              dilation_rate=1, kernel_initializer='he_normal',
+                              kernel_regularizer=l2(0.00005), activity_regularizer=None,
+                              kernel_constraint=None, use_bias=False)
+y = linear_layer(x)
+print(y)
+print('weights:', len(linear_layer.weights))
+print('trainable weights:', len(linear_layer.trainable_weights))
 
+class MLPBlock(keras.layers.Layer):
 
-inputs = keras.layers.Input(
-    shape=(seq_len, 112, 112, 3), batch_shape=(batch_size, seq_len, 112, 112, 3))
-feature = res3d_clstm_mobilenet(inputs, seq_len, weight_decay)
-flatten = keras.layers.Flatten(name='Flatten')(feature)
-classes = keras.layers.Dense(num_classes, activation='linear', kernel_initializer='he_normal',
-                             kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
-outputs = keras.layers.Activation('softmax', name='Output')(classes)
-model = keras.models.Model(inputs=inputs, outputs=outputs)
+    def __init__(self):
+        super(MLPBlock, self).__init__()
+        self.CrossStitch_1 = CrossStitchBlock(batch_size = 3, channel = 32)
+        self.CrossStitch_2 = CrossStitchBlock(batch_size = 3, channel = 32)
+        self.CrossStitch = CrossStitchBlock(batch_size = 3, channel = 32)
 
-# muli GPU
-# model = multi_gpu_model(model, gpus=2)
+    def build(self, input_shape):
 
-# load pretrained model
-# pretrained_model = '%sjester_rgb_weights.02-0.71.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % pretrained_model
-# model.load_weights(pretrained_model, by_name=True)
+        super(MLPBlock, self).build(input_shape)
 
-# for i in range(len(model.trainable_weights)):
-#     print model.trainable_weights[i]
+    def call(self, inputs):
+        x = self.CrossStitch_1(inputs)
+        x = self.CrossStitch_2(x)
+        return self.CrossStitch(x)
 
-# optimizer = keras.optimizers.SGD(
-#     lr=0.001, decay=0, momentum=0.9, nesterov=False)
-# model.compile(optimizer=optimizer,
-#               loss='categorical_crossentropy', metrics=['accuracy'])
+class SeBlock(keras.layers.Layer):
+    def __init__(self, channel, reduction_ratio=4,**kwargs):
+        super(SeBlock,self).__init__(**kwargs)
+        self.reduction_ratio = reduction_ratio
+        self.channel = channel
+        self.GlobalAveragePooling3D = keras.layers.GlobalAveragePooling3D(name='SE_Global_Average_Pooling')
+        self.Dense_1 = keras.layers.Dense(self.channel / self.reduction_ratio, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(self.reduction_ratio), name='Fully_connected_1a')
+        self.Activation = keras.layers.Activation('relu', name='SE_ReLU_1')
+        self.Dense_2 = keras.layers.Dense(self.channel, activation='linear', kernel_initializer='he_normal',
+                    kernel_regularizer=l2(self.reduction_ratio), name='Fully_connected_1b')
+        self.sigmoid = keras.backend.sigmoid
+        self.Reshape = keras.layers.Reshape([1,1,1,self.channel], name='SE_Reshape')
+        self.Multiply = keras.layers.Multiply()
 
-# lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
-# print lr_reducer
+    def build(self,input_shape):
+      # input_shape
+      super(SeBlock, self).build(input_shape)
 
-# model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-#                                    save_best_only=False, save_weights_only=True, mode='auto')
-# callbacks = [lr_reducer, model_checkpoint]
+    def call(self, inputs):
+        x = keras.backend.mean(inputs, axis=[1, 2, 3])
+        x = keras.backend.
+        x = keras.backend.relu(x, alpha=0.0, max_value=None)
+        x = keras.backend.
+        x = keras.backend.
 
-# if cfg_dataset == JESTER:
-#     model.fit_generator(jesterTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         steps_per_epoch=train_steps,
-#                         epochs=nb_epoch,
-#                         verbose=1,
-#                         callbacks=callbacks,
-#                         validation_data=jesterTestImageGenerator(
-#                             testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         validation_steps=test_steps,
-#                         initial_epoch=init_epoch,
-#                         )
-# elif cfg_dataset == ISOGD:
-#     model.fit_generator(isoTrainImageGenerator(training_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         steps_per_epoch=train_steps,
-#                         epochs=nb_epoch,
-#                         verbose=1,
-#                         callbacks=callbacks,
-#                         validation_data=isoTestImageGenerator(
-#                             testing_datalist, batch_size, seq_len, num_classes, cfg_modality),
-#                         validation_steps=test_steps,
-#                         initial_epoch=init_epoch,
-#                         )
+        x = self.Dense_1(x)
+        x = self.Activation(x)
+        x = self.Dense_2(x)
+        x = self.sigmoid(x)
+        x = self.Reshape(x)
+
+        return self.Multiply([inputs,x])
+
+mlp = MLPBlock()
+y = mlp(tf.ones(shape=(3, 32)))  # The first call to the `mlp` will create the weights
+print(y)
+print('weights:', len(mlp.weights))
+print('trainable weights:', len(mlp.trainable_weights))

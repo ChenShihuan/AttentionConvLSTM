@@ -9,7 +9,7 @@ keras=tf.contrib.keras
 l2=keras.regularizers.l2
 K=tf.contrib.keras.backend
 import inputs as data
-from SEres3d_clstm_mobilenet_Fusion import CatConvFusionRes3d_clstm_mobilenet,SeBlock,CrossBlock,CatConvBlock,relu6
+from res3d_clstm_mobilenet_Fusion import CatConvFusionRes3d_clstm_mobilenet,SeBlock,CrossBlock,CatConvBlock,relu6
 from callbacks import LearningRateScheduler 
 from datagen import isoTrainImageGenerator, isoTestImageGenerator, isoFusionTrainImageGenerator, isoFusionTestImageGenerator
 from datagen import jesterTrainImageGenerator, jesterTestImageGenerator
@@ -62,14 +62,14 @@ elif cfg_dataset == ISOGD:
     seq_len = 32
     batch_size = 2
     num_classes = 249
-    dataset_name = 'isogr_CCF'
+    dataset_name = 'isogr_CCF_NO_SE'
     RGB_training_datalist = './dataset_splits/IsoGD/train_rgb_list.txt'
     RGB_testing_datalist = './dataset_splits/IsoGD/valid_rgb_list.txt'
     Flow_training_datalist = './dataset_splits/IsoGD/train_flow_list.txt'
     Flow_testing_datalist = './dataset_splits/IsoGD/valid_flow_list.txt'
 
 weight_decay = 0.00005
-model_prefix = './models_Rewrite_SEnet/Fusion/'
+model_prefix = './models_old/Fusion/'
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
@@ -83,8 +83,6 @@ print 'nb_epoch: %d - seq_len: %d - batch_size: %d - weight_decay: %.6f' % (
 
 def lr_polynomial_decay(global_step):
     learning_rate = 0.001
-    # learning_rate = 0.00001 GPU 6
-    # learning_rate = 0.0001 GPU 5 tmux new -s my_session
     end_learning_rate = 0.000001
     decay_steps = train_steps*nb_epoch
     power = 0.9
@@ -108,7 +106,7 @@ model = keras.models.Model(inputs=[inputs_RGB, inputs_Flow], outputs=outputs)
 # # model_Fusion  = keras.models.Model(inputs=inputs_RGB, outputs=outputs)
 print(model.summary())
 
-plot_model(model,to_file="./network_image/training_CatConvFusionRes3d_clstm_mobilenet_clstm_mobilenet.png",show_shapes=True)
+# plot_model(model,to_file="./network_image/training_CatConvFusionRes3d_clstm_mobilenet_clstm_mobilenet_NO_SE.png",show_shapes=True)
 
 # load pretrained model
 RGB_pretrained_model = '%sjester_rgb_gatedclstm_weights_Fusion_pretrained.h5'%(model_prefix)

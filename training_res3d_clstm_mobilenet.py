@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import io
 import sys
 sys.path.append("./networks")
@@ -26,7 +26,7 @@ Flow = 2
 JESTER = 0
 ISOGD = 1
 
-cfg_modality = Flow
+cfg_modality = RGB
 cfg_dataset = ISOGD
 
 if cfg_modality == RGB:
@@ -37,26 +37,27 @@ elif cfg_modality == Flow:
     str_modality = 'flow'
 
 if cfg_dataset == JESTER:
-    nb_epoch = 10
+    nb_epoch = 20
     init_epoch = 0
     seq_len = 16
     batch_size = 16
     num_classes = 27
     dataset_name = 'jester_%s' % str_modality
+    model_prefix = './models_old/JESTER/'
     training_datalist = './dataset_splits/Jester/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/Jester/valid_%s_list.txt' % str_modality
 elif cfg_dataset == ISOGD:
-    nb_epoch = 10
+    nb_epoch = 30
     init_epoch = 0
     seq_len = 32
     batch_size = 2
     num_classes = 249
     dataset_name = 'isogr_%s' % str_modality
+    model_prefix = './models_old/ISOGD/'
     training_datalist = './dataset_splits/IsoGD/train_%s_list.txt' % str_modality
     testing_datalist = './dataset_splits/IsoGD/valid_%s_list.txt' % str_modality
 
 weight_decay = 0.00005
-model_prefix = './models_old/'
 weights_file = '%s/%s_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
@@ -87,10 +88,10 @@ classes = keras.layers.Dense(num_classes, activation='linear', kernel_initialize
                              kernel_regularizer=l2(weight_decay), name='Classes')(flatten)
 outputs = keras.layers.Activation('softmax', name='Output')(classes)
 model = keras.models.Model(inputs=inputs, outputs=outputs)
-plot_model(model,to_file="training_res3d_clstm_mobilenet_Flow.png",show_shapes=True)
+# plot_model(model,to_file="./network_image/training_res3d_clstm_mobilenet.png",show_shapes=True)
 
 # load pretrained model
-pretrained_model = '%sjester_rgb_weights.04-0.71_pretrained.h5'%(model_prefix)
+pretrained_model = './models_old/ISOGD/jester_rgb_weights.19-0.68_pretrained.h5'
 print 'Loading pretrained model from %s' % pretrained_model
 model.load_weights(pretrained_model, by_name=True)
 
@@ -103,7 +104,7 @@ model.compile(optimizer=optimizer,
               loss='categorical_crossentropy', metrics=['accuracy'])
 
 lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
-print lr_reducer
+# print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
                                    save_best_only=False, save_weights_only=True, mode='auto')

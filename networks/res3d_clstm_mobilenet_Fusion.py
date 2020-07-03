@@ -188,10 +188,10 @@ def CatConvFuction(inputs_A,inputs_B,weight_decay):
   # print(inputs_A)
   x = keras.layers.Concatenate(axis=2)([inputs_A, inputs_B])
   # print(x)
-  kernel_shape = keras.backend.int_shape(x)
-  kernel_size = kernel_shape[1]
+  # kernel_shape = keras.backend.int_shape(x)
+  # kernel_size = kernel_shape[1]
 
-  # x = keras.layers.Conv1D(filters = 1, kernel_size = kernel_size, strides=1, padding='same',
+  # x = keras.layers.Conv1D(filters = 2, kernel_size = filters_size, strides=1, padding='same',
   #                         kernel_initializer='he_normal',
   #                         kernel_regularizer=l2(weight_decay), activity_regularizer=None,
   #                         activation='relu',kernel_constraint=None, use_bias=False)(x)
@@ -279,7 +279,7 @@ def Res3D_Block1(inputs, weight_decay, str_modality):
   conv3d_1 = keras.layers.Activation('relu', name='ReLU_1_%s'%str_modality)(conv3d_1)
 
   # SEnet Block1
-  conv3d_1 = SEnet(conv3d_1,64,4,'Block1_%s'%str_modality)
+  # conv3d_1 = SEnet(conv3d_1,64,4,'Block1_%s'%str_modality)
 
   return conv3d_1
 
@@ -318,7 +318,7 @@ def Res3D_Block2(inputs, weight_decay, str_modality):
   conv3d_2b_b = keras.layers.BatchNormalization(name='BatchNorm_2b_b_%s'%str_modality)(conv3d_2b_b)
 
   # SEnet Block2
-  conv3d_2b_b = SEnet(conv3d_2b_b,64,4,'Block2_%s'%str_modality)
+  # conv3d_2b_b = SEnet(conv3d_2b_b,64,4,'Block2_%s'%str_modality)
 
   conv3d_2b = keras.layers.Add(name='Add_2b_%s'%str_modality)([conv3d_2a, conv3d_2b_b])
   conv3d_2b = keras.layers.Activation('relu', name='ReLU_2b_%s'%str_modality)(conv3d_2b)
@@ -360,7 +360,7 @@ def Res3D_Block3(inputs, weight_decay, str_modality):
   conv3d_3b_b = keras.layers.BatchNormalization(name='BatchNorm_3b_b_%s'%str_modality)(conv3d_3b_b)
 
   # SEnet Block3
-  conv3d_3b_b = SEnet(conv3d_3b_b,128,4,'Block3_%s'%str_modality)
+  # conv3d_3b_b = SEnet(conv3d_3b_b,128,4,'Block3_%s'%str_modality)
 
   conv3d_3b = keras.layers.Add(name='Add_3b_%s'%str_modality)([conv3d_3a, conv3d_3b_b])
   conv3d_3b = keras.layers.Activation('relu', name='ReLU_3b_%s'%str_modality)(conv3d_3b)
@@ -402,7 +402,7 @@ def Res3D_Block4(inputs, weight_decay, str_modality):
   conv3d_4b_b = keras.layers.BatchNormalization(name='BatchNorm_4b_b_%s'%str_modality)(conv3d_4b_b)
   
   # SEnet Block4
-  conv3d_4b_b = SEnet(conv3d_4b_b,256,4,'Block4_%s'%str_modality)
+  # conv3d_4b_b = SEnet(conv3d_4b_b,256,4,'Block4_%s'%str_modality)
 
   conv3d_4b = keras.layers.Add(name='Add_4b_%s'%str_modality)([conv3d_4a, conv3d_4b_b])
   conv3d_4b = keras.layers.Activation('relu', name='ReLU_4b_%s'%str_modality)(conv3d_4b)
@@ -421,24 +421,19 @@ def CatConvFusionRes3d(inputs_RGB, inputs_Flow, weight_decay):
   # FusionRes3d verion 1
   res3d_1_RGB = Res3D_Block1(inputs_RGB, weight_decay, 'rgb')
   res3d_1_Flow = Res3D_Block1(inputs_Flow, weight_decay, 'flow')
-  # res3d_1 = CatConvBlock(weight_decay)([res3d_1_RGB, res3d_1_Flow])
-  res3d_1 = CatConvFuction(res3d_1_RGB,res3d_1_Flow,weight_decay)
+  res3d_1 = CatConvBlock(weight_decay)([res3d_1_RGB, res3d_1_Flow])
 
   res3d_2_RGB = Res3D_Block2(res3d_1, weight_decay, 'rgb')
   res3d_2_Flow = Res3D_Block2(res3d_1, weight_decay, 'flow')
-  # res3d_2 = CatConvBlock(weight_decay)([res3d_2_RGB, res3d_2_Flow])
-  res3d_2 = CatConvFuction(res3d_2_RGB,res3d_2_Flow,weight_decay)
+  res3d_2 = CatConvBlock(weight_decay)([res3d_2_RGB, res3d_2_Flow])
 
   res3d_3_RGB = Res3D_Block3(res3d_2, weight_decay, 'rgb')
   res3d_3_Flow = Res3D_Block3(res3d_2, weight_decay, 'flow')
-  # res3d_3 = CatConvBlock(weight_decay)([res3d_3_RGB, res3d_3_Flow])
-  res3d_3 = CatConvFuction(res3d_3_RGB,res3d_3_Flow,weight_decay)
+  res3d_3 = CatConvBlock(weight_decay)([res3d_3_RGB, res3d_3_Flow])
 
   res3d_4_RGB = Res3D_Block4(res3d_3, weight_decay, 'rgb')
   res3d_4_Flow = Res3D_Block4(res3d_3, weight_decay, 'flow')
-  # res3d_4 = CatConvBlock(weight_decay)([res3d_4_RGB, res3d_4_Flow])
-  res3d_4 = CatConvFuction(res3d_4_RGB,res3d_4_Flow,weight_decay)
-
+  res3d_4 = CatConvBlock(weight_decay)([res3d_4_RGB, res3d_4_Flow])
   return res3d_4
 
 def FusionRes3d(inputs_RGB, inputs_Flow, weight_decay):

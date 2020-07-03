@@ -83,7 +83,7 @@ def Res3D_Block1(inputs, weight_decay):
   conv3d_1 = keras.layers.BatchNormalization(name='BatchNorm_1_0')(conv3d_1)
   conv3d_1 = keras.layers.Activation('relu', name='ReLU_1')(conv3d_1)
 
-  # SEnet Block2
+  # SEnet Block1
   conv3d_1 = SEnet(conv3d_1,64,4,'Block1')
 
   return conv3d_1

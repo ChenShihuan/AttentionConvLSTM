@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import io
 import sys
 sys.path.append("./networks")
@@ -27,7 +27,7 @@ JESTER = 0
 ISOGD = 1
 
 cfg_modality = RGB
-cfg_dataset = JESTER
+cfg_dataset = ISOGD
 
 if cfg_modality == RGB:
     str_modality = 'rgb'
@@ -59,7 +59,7 @@ elif cfg_dataset == ISOGD:
 
 weight_decay = 0.00005
 
-weights_file = '%s/%s_SEResNet_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
+weights_file = '%s%s_SEResNet_weights.{epoch:02d}-{val_loss:.2f}.h5' % (
     model_prefix, dataset_name)
 
 _, train_labels = data.load_iso_video_list(training_datalist)
@@ -92,9 +92,9 @@ print(model.summary())
 plot_model(model,to_file="./network_image/training_SEres3d_clstm_mobilenet.png",show_shapes=True)
 
 # load pretrained model
-# pretrained_model = '%sjester_rgb_SEResNet_weights.19-0.68_pretrained.h5'%(model_prefix)
-# print 'Loading pretrained model from %s' % pretrained_model
-# model.load_weights(pretrained_model, by_name=True)
+pretrained_model = '%sjester_rgb_SEResNet_weights.29-0.67_pretrained.h5'%(model_prefix)
+print 'Loading pretrained model from %s' % pretrained_model
+model.load_weights(pretrained_model, by_name=True)
 
 for i in range(len(model.trainable_weights)):
     print model.trainable_weights[i]
@@ -108,7 +108,7 @@ lr_reducer = LearningRateScheduler(lr_polynomial_decay, train_steps)
 print lr_reducer
 
 model_checkpoint = ModelCheckpoint(weights_file, monitor="val_acc",
-                                   save_best_only=False, save_weights_only=False, mode='auto')
+                                   save_best_only=False, save_weights_only=True, mode='auto')
 callbacks = [lr_reducer, model_checkpoint]
 
 if cfg_dataset == JESTER:
